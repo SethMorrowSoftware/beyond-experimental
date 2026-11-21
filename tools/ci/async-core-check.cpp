@@ -1630,8 +1630,12 @@ static void check_process_volume(void)
 	for (int i = 0; i < 20; i++)
 	{
 		t_done = wait_done(t_jobs[i], 60000);
+		/* What the child writes: its input, and the input's length. (Not
+		 * written with "%s" of t_texts[i]: the MinGW GCC of the Windows runner
+		 * takes it for the whole table, and refuses the build for a buffer
+		 * that could not hold that.) */
 		char t_wanted[64];
-		snprintf(t_wanted, sizeof(t_wanted), "%s%d", t_texts[i],
+		snprintf(t_wanted, sizeof(t_wanted), "process %d%d", i,
 		         (int)strlen(t_texts[i]));
 		if (!data_is(t_done, t_wanted))
 			t_all = false;
