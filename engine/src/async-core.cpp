@@ -3809,6 +3809,12 @@ MCAsyncCoreWakeSignal(MCAsyncWakeId p_wake)
 	t_lock->Leave();
 }
 
+bool
+MCAsyncCoreCanStartProcesses(void)
+{
+	return MCASYNC_PROCESSES != 0;
+}
+
 MCAsyncJobId
 MCAsyncCoreStartProcess(const MCAsyncProcessOptions& p_options,
                         void *p_context)

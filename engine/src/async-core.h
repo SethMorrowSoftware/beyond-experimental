@@ -202,6 +202,11 @@ struct MCAsyncProcessOptions
 MCAsyncJobId MCAsyncCoreStartProcess(const MCAsyncProcessOptions& p_options,
                                      void *p_context);
 
+/* Whether a process can be run here at all. Where it cannot (Android, iOS
+ * and a browser), MCAsyncCoreStartProcess's job is Done at once with
+ * kMCAsyncErrorNotSupported. */
+bool MCAsyncCoreCanStartProcesses(void);
+
 /* Queue bytes for the process's input (they are copied). False if the job
  * is not a running process, its input is closed, or there is no memory. */
 bool MCAsyncCoreProcessWrite(MCAsyncJobId p_job, const void *p_bytes,

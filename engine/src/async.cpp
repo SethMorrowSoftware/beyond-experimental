@@ -1171,7 +1171,11 @@ extern "C" MC_DLLEXPORT_DEF uint32_t MCAsyncJobsShell(MCStringRef p_command, MCS
 	if (t_record == nullptr)
 		return 0;
 
-	if (MCStringIsEmpty(MCshellcmd))
+	/* Where no program can be run (Android, iOS, a browser) there is no
+	 * shellCommand either: the job's message says "not supported", as the
+	 * core's does for a program there (asyncProcessOpen), rather than the
+	 * call failing with an error */
+	if (MCStringIsEmpty(MCshellcmd) && MCAsyncCoreCanStartProcesses())
 		return MCAsyncAbandon(t_record, kHandler, "no shell");
 
 	MCAsyncProcessOptions t_options;
