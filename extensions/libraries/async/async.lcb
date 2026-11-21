@@ -510,8 +510,8 @@ there.
 
 It works as <asyncWriteFile> does, and sends the same message. Appends
 to one file that are started one after the other may be written in
-either order: start the next from the message of the one before where
-the order matters.
+either order, each of them whole: start the next from the message of the
+one before where the order matters.
 
 Tags: Library
 

@@ -787,6 +787,57 @@ static void check_many(void)
 	check(s_thread_starts >= 1 && s_thread_starts <= 64,
 	      "threads were made, and each said so", s_thread_starts);
 
+	/* Appends to one file, started together and each longer than the piece
+	 * a write is made in: every one is written, and each is whole (on
+	 * Windows the second could not open a file the first had open) */
+	enum { kAppends = 6, kAppendSize = 2 * 1024 * 1024 + 4096 };
+	forget_events();
+	remove(path_in(1, "appended.bin"));
+	static char *t_blocks[kAppends];
+	MCAsyncJobId t_appends[kAppends];
+	for (int i = 0; i < kAppends; i++)
+	{
+		t_blocks[i] = (char *)malloc(kAppendSize);
+		memset(t_blocks[i], 'a' + i, kAppendSize);
+	}
+	for (int i = 0; i < kAppends; i++)
+		t_appends[i] = MCAsyncCoreWriteFile(path_in(1, "appended.bin"),
+		                                    t_blocks[i], kAppendSize, true,
+		                                    nullptr);
+	bool t_appended = true;
+	for (int i = 0; i < kAppends; i++)
+	{
+		Seen *t_done = wait_done(t_appends[i], 60000);
+		if (t_done == nullptr || t_done->error != kMCAsyncErrorNone)
+			t_appended = false;
+	}
+	check(t_appended, "appends to one file at once are all written", 0);
+
+	size_t t_appended_length = 0;
+	char *t_appended_bytes = read_plain(path_in(1, "appended.bin"),
+	                                    t_appended_length);
+	bool t_whole = t_appended_bytes != nullptr &&
+			t_appended_length == (size_t)kAppends * kAppendSize;
+	int t_letters_seen = 0;
+	for (int i = 0; t_whole && i < kAppends; i++)
+	{
+		const char *t_block = t_appended_bytes + (size_t)i * kAppendSize;
+		for (size_t j = 1; j < kAppendSize; j++)
+			if (t_block[j] != t_block[0])
+			{
+				t_whole = false;
+				break;
+			}
+		if (t_block[0] >= 'a' && t_block[0] < 'a' + kAppends)
+			t_letters_seen |= 1 << (t_block[0] - 'a');
+	}
+	check(t_whole && t_letters_seen == (1 << kAppends) - 1,
+	      "and each is whole in the file, in whatever order",
+	      (long)t_appended_length);
+	free(t_appended_bytes);
+	for (int i = 0; i < kAppends; i++)
+		free(t_blocks[i]);
+
 	check(stop_core(), "the threads end after the many jobs", 0);
 	sleep_ms(50);
 	check(s_thread_ends == s_thread_starts,
@@ -1110,6 +1161,43 @@ static int child_main(int p_count, char **p_arguments)
 		return 0;
 	}
 
+	/* Close both outputs, then put everything on the input into the file
+	 * p_arguments[2] (or, with no file, read nothing and stay p_number
+	 * milliseconds), and exit with 9 */
+	if (strcmp(t_mode, "mute") == 0)
+	{
+#if defined(_WIN32)
+		_close(1);
+		_close(2);
+#else
+		close(1);
+		close(2);
+#endif
+		if (p_count < 3)
+		{
+			sleep_ms((unsigned int)t_number);
+			return 9;
+		}
+
+		FILE *t_file = fopen(p_arguments[2], "wb");
+		if (t_file == nullptr)
+			return 5;
+		static char t_buffer[65536];
+		for (;;)
+		{
+#if defined(_WIN32)
+			int t_read = _read(0, t_buffer, sizeof(t_buffer));
+#else
+			ssize_t t_read = read(0, t_buffer, sizeof(t_buffer));
+#endif
+			if (t_read <= 0)
+				break;
+			fwrite(t_buffer, 1, (size_t)t_read, t_file);
+		}
+		fclose(t_file);
+		return 9;
+	}
+
 	/* Start another of this program that sleeps, with this one's output,
 	 * say so, and sleep too: two processes hold the pipe */
 	if (strcmp(t_mode, "family") == 0)
@@ -1183,13 +1271,13 @@ static int child_main(int p_count, char **p_arguments)
 /* Run this program as a process, in a mode */
 static MCAsyncJobId start_child(const char *p_mode, const char *p_argument,
                                 MCAsyncProcessOptions& x_options,
-                                bool p_with_self = false)
+                                const char *p_path = nullptr)
 {
 #if defined(_WIN32)
 	static char s_command[8192];
 	snprintf(s_command, sizeof(s_command), "\"%s\" --child %s %s%s%s%s", s_self,
-	         p_mode, p_argument, p_with_self ? " \"" : "",
-	         p_with_self ? s_self : "", p_with_self ? "\"" : "");
+	         p_mode, p_argument, p_path != nullptr ? " \"" : "",
+	         p_path != nullptr ? p_path : "", p_path != nullptr ? "\"" : "");
 	x_options.command_line = s_command;
 #else
 	static const char *s_arguments[6];
@@ -1197,7 +1285,7 @@ static MCAsyncJobId start_child(const char *p_mode, const char *p_argument,
 	s_arguments[1] = "--child";
 	s_arguments[2] = p_mode;
 	s_arguments[3] = p_argument;
-	s_arguments[4] = p_with_self ? s_self : nullptr;
+	s_arguments[4] = p_path;
 	s_arguments[5] = nullptr;
 	x_options.arguments = s_arguments;
 #endif
@@ -1483,6 +1571,47 @@ static void check_process_volume(void)
 	      "input that a process does not take does not hold its job up",
 	      t_done != nullptr ? t_done->error : -1);
 
+	/* A process that closes both its outputs and goes on reading (one
+	 * whose output goes to a file is the same to the job): it is given what
+	 * is written to it for as long as its input is open, and the job ends
+	 * when it does */
+	t_options = no_options();
+	t_options.stream = true;
+	t_job = start_child("mute", "0", t_options, path_in(1, "mute.txt"));
+	sleep_ms(300);
+	drain();
+	check(MCAsyncCoreStatus(t_job) == kMCAsyncStatusRunning &&
+	      find_done(t_job) == nullptr,
+	      "a process that has closed both its outputs is still running",
+	      MCAsyncCoreStatus(t_job));
+	check(MCAsyncCoreProcessWrite(t_job, "kept ", 5),
+	      "and still takes input", 0);
+	sleep_ms(100);
+	drain();
+	check(MCAsyncCoreProcessWrite(t_job, "whole", 5) &&
+	      MCAsyncCoreProcessCloseInput(t_job),
+	      "until its input is closed", 0);
+	t_done = wait_done(t_job, 30000);
+	check(t_done != nullptr && t_done->error == kMCAsyncErrorNone &&
+	      t_done->code == 9, "its job ends when it does, with its exit code",
+	      t_done != nullptr ? (long)t_done->code : -1);
+	check(file_is(path_in(1, "mute.txt"), "kept whole", 10),
+	      "and it was given all that was written to it", 0);
+
+	/* The same process ending of its own accord, its input never closed
+	 * and never read: its ending is seen though no pipe shows it */
+	t_options = no_options();
+	t_options.stream = true;
+	unsigned long long t_mute_start = now_ms();
+	t_job = start_child("mute", "400", t_options);
+	t_done = wait_done(t_job, 30000);
+	check(t_done != nullptr && t_done->error == kMCAsyncErrorNone &&
+	      t_done->code == 9 && now_ms() - t_mute_start < 10000,
+	      "a process with no output open that ends by itself ends its job",
+	      t_done != nullptr ? (long)t_done->code : -1);
+	check(!MCAsyncCoreProcessWrite(t_job, "x", 1),
+	      "after which it takes no input", 0);
+
 	/* Twenty at once */
 	forget_events();
 	MCAsyncJobId t_jobs[20];
@@ -1532,7 +1661,7 @@ static void check_process_cancel(void)
 	/* A process that started another, which holds the pipe too: both go */
 	t_options = no_options();
 	t_options.stream = true;
-	t_job = start_child("family", "60000", t_options, true);
+	t_job = start_child("family", "60000", t_options, s_self);
 	size_t t_length = 0;
 	unsigned long long t_until = now_ms() + 30000;
 	for (;;)

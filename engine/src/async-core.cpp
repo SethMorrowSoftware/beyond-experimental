@@ -123,6 +123,10 @@ static const size_t kMCAsyncHighWater = 8 * 1024 * 1024;
  * the process and those it started closes their ends of the pipes, but one
  * that left the group (a daemon) can hold an end open for ever. */
 static const unsigned int kMCAsyncCancelGraceMs = 500;
+
+/* How often a process that has closed both its outputs, and so has no pipe
+ * to end when it does, is asked whether it has ended */
+static const int kMCAsyncEndedPollMs = 200;
 #endif
 
 /* The size of the table of jobs (a power of two) */
@@ -594,6 +598,11 @@ struct Core
 	Lock lock;
 	/* MCAsyncCoreFinalize waits here for the threads to end */
 	Condition ended;
+
+	/* Held while an append is written, so that each is whole in its file
+	 * however long it is and however many are written at once. Taken
+	 * before 'lock', never with it held. */
+	Lock append_lock;
 
 	bool shutdown;
 	MCAsyncWakeCallback wake;
@@ -1443,9 +1452,11 @@ RunWriteFile(Core *p_core, Job *p_job, Outcome& r_outcome)
 {
 	JobSetProgress(p_core, p_job, 0, p_job->length);
 
+	/* Shared as the engine's own files are (MCS_open): a file that a script
+	 * has open, or that another append is being written to, can be opened */
 	HANDLE t_file = CreateFileW(
 			p_job->path, p_job->append ? FILE_APPEND_DATA : GENERIC_WRITE,
-			FILE_SHARE_READ, nullptr,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
 			p_job->append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
 			nullptr);
 	if (t_file == INVALID_HANDLE_VALUE)
@@ -1678,7 +1689,11 @@ RunQueuedJob(Core *p_core, Job *p_job)
 			RunReadFile(p_core, p_job, t_outcome);
 			break;
 		case kJobWrite:
+			if (p_job->append)
+				p_core->append_lock.Enter();
 			RunWriteFile(p_core, p_job, t_outcome);
+			if (p_job->append)
+				p_core->append_lock.Leave();
 			break;
 		case kJobCopy:
 			RunCopyFile(p_core, p_job, t_outcome);
@@ -2645,6 +2660,19 @@ ProcessReadPipe(ProcessOutput& x_output, int p_stream, int& x_fd,
 	x_fd = -1;
 }
 
+/* Whether the process has ended, without collecting it (see where the
+ * thread waits for it). A process the system has collected itself has. */
+bool
+ProcessHasEnded(Process *p_process)
+{
+	siginfo_t t_info;
+	memset(&t_info, 0, sizeof(t_info));
+	if (waitid(P_PID, (id_t)p_process->pid, &t_info,
+	           WEXITED | WNOHANG | WNOWAIT) != 0)
+		return errno != EINTR;
+	return t_info.si_pid != 0;
+}
+
 void
 ProcessThread(void *p_argument)
 {
@@ -2702,7 +2730,12 @@ ProcessThread(void *p_argument)
 			t_turn.write_length = 0;
 		}
 
-		if (t_process->out_fd < 0 && t_process->err_fd < 0)
+		/* With nothing more to read, the process may still be reading what
+		 * it is given (its output goes to a file, or it closed it): it is
+		 * given it until its input is closed, by the script, by the process
+		 * or by its ending */
+		bool t_input_only = t_process->out_fd < 0 && t_process->err_fd < 0;
+		if (t_input_only && t_process->in_fd < 0)
 			break;
 
 		int t_timeout = -1;
@@ -2712,6 +2745,16 @@ ProcessThread(void *p_argument)
 			if (t_now >= t_stop_at)
 				break;
 			t_timeout = (int)(t_stop_at - t_now);
+		}
+
+		/* No pipe ends when such a process does, if something it started
+		 * still holds its input: look now and then */
+		if (t_input_only)
+		{
+			if (ProcessHasEnded(t_process))
+				break;
+			if (t_timeout < 0 || t_timeout > kMCAsyncEndedPollMs)
+				t_timeout = kMCAsyncEndedPollMs;
 		}
 
 		struct pollfd t_fds[4];
@@ -2735,11 +2778,14 @@ ProcessThread(void *p_argument)
 			t_fds[t_count].events = POLLIN;
 			t_count += 1;
 		}
-		if (t_turn.write_length > 0 && t_process->in_fd >= 0)
+		if (t_process->in_fd >= 0 &&
+		    (t_turn.write_length > 0 || t_input_only))
 		{
+			/* (with nothing to write, poll still tells of the other end
+			 * being closed) */
 			t_in_index = t_count;
 			t_fds[t_count].fd = t_process->in_fd;
-			t_fds[t_count].events = POLLOUT;
+			t_fds[t_count].events = t_turn.write_length > 0 ? POLLOUT : 0;
 			t_count += 1;
 		}
 		for (int i = 0; i < t_count; i++)
@@ -2768,7 +2814,8 @@ ProcessThread(void *p_argument)
 		if (t_in_index >= 0 && t_fds[t_in_index].revents != 0)
 		{
 			ssize_t t_written = -1;
-			if ((t_fds[t_in_index].revents & POLLOUT) != 0)
+			if (t_turn.write_length > 0 &&
+			    (t_fds[t_in_index].revents & POLLOUT) != 0)
 			{
 				t_written = write(t_process->in_fd, t_write_buffer,
 				                  t_turn.write_length);
@@ -3212,7 +3259,13 @@ ProcessThread(void *p_argument)
 			t_turn.write_length = 0;
 		}
 
-		if (t_out.ended && t_err.ended)
+		/* With nothing more to read, the process may still be reading what
+		 * it is given (its output goes to a file, or it closed it): it is
+		 * given it until its input is closed, by the script, by the process
+		 * or by its ending */
+		if (t_out.ended && t_err.ended &&
+		    (t_process->in_pipe == INVALID_HANDLE_VALUE ||
+		     WaitForSingleObject(t_process->process, 0) == WAIT_OBJECT_0))
 			break;
 
 		DWORD t_timeout = INFINITE;
@@ -3228,7 +3281,8 @@ ProcessThread(void *p_argument)
 		{
 			PipeReaderStart(t_out);
 			PipeReaderStart(t_err);
-			if (t_out.ended && t_err.ended)
+			if (t_out.ended && t_err.ended &&
+			    t_process->in_pipe == INVALID_HANDLE_VALUE)
 				break;
 		}
 
@@ -3256,6 +3310,9 @@ ProcessThread(void *p_argument)
 			t_handles[t_count++] = t_err.overlapped.hEvent;
 		if (t_writing)
 			t_handles[t_count++] = t_write.hEvent;
+		/* (the process's ending is then all that tells of it) */
+		if (t_out.ended && t_err.ended)
+			t_handles[t_count++] = t_process->process;
 
 		if (WaitForMultipleObjects(t_count, t_handles, FALSE, t_timeout) ==
 		    WAIT_FAILED)
