@@ -95,6 +95,9 @@
 				# OXT-Beyond: workers, the engine started again without a
 				# window to run a script's long handlers beside the stack.
 				'script-libraries/worker/worker.livecodescript',
+				# OXT-Beyond: database queries run by a worker that holds
+				# the connection, beside revDB's own calls.
+				'script-libraries/asyncdatabase/asyncdatabase.livecodescript',
 			],
 			
 			'dependencies':

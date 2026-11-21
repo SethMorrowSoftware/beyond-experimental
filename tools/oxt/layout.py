@@ -154,6 +154,7 @@ REPO_BUILT_EXTENSIONS = (
     'com.livecode.library.androidaudiorecorder',
     'com.livecode.library.androidbgaudio',
     'com.livecode.library.androidutils',
+    'com.livecode.library.asyncdatabase',
     'com.livecode.library.diff',
     'com.livecode.library.drawing',
     'com.livecode.library.dropbox',
