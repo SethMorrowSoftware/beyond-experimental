@@ -36,9 +36,10 @@ local sFolder
 constant kWaitSeconds = 30
 
 on TestSetup
-   -- (No requirement: the library needs no compiler where the tests run,
-   -- so these run in the web and Android standalones too, each with the
-   -- library's module among its extensions.)
+   -- The library needs no compiler where the tests run, only its module:
+   -- these run in the web standalone too, and in the Android one when the
+   -- IDE that built it has the library (see the requirement).
+   TestSkipIfNot "extension", "org.openxtalk.library.async"
    TestLoadExtension "org.openxtalk.library.async"
 
    put empty into sDone
