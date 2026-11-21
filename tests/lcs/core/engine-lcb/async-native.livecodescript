@@ -42,8 +42,16 @@ local sWakes
 
 constant kWaitSeconds = 30
 
+-- The name of _async_native.lcb's library
+constant kModule = "com.livecode.lcs_tests.core.extensions.async_native"
+
 on TestSetup
-   TestLoadAuxiliaryExtension "_async_native"
+   -- Once a test has loaded the module it stays loaded where the tests
+   -- share one engine (in a browser, tools/ci/web_tests.py), and loading
+   -- it again would fail
+   if kModule is not among the lines of the loadedExtensions then
+      TestLoadAuxiliaryExtension "_async_native"
+   end if
    put empty into sWoken
    put empty into sCalled
    put empty into sWakes
