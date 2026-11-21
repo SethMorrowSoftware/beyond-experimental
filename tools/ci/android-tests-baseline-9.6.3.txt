@@ -253,6 +253,8 @@ lcs: core/strings/matches: TestMatchesRegexCase
 lcs: core/strings/matches: TestMatchesWildcard
 lcs: core/strings/matches: TestMatchesWildcardAsFilter
 lcs: core/strings/matches: TestMatchesWildcardCase
+lcs: extensions/libraries/async-freeze: TestFreezeOfAFolderTree  # 9.6.3 has no background jobs (the engine functions the library binds to are new); skips until a release's IDE has the library
+lcs: extensions/libraries/async-freeze: TestFreezeOfALargeFile  # 9.6.3 has no background jobs (the engine functions the library binds to are new); skips until a release's IDE has the library
 lcs: extensions/libraries/async: TestAppendFile  # 9.6.3 has no background jobs (the engine functions the library binds to are new); skips until a release's IDE has the library
 lcs: extensions/libraries/async: TestCancelFileJob  # 9.6.3 has no background jobs (the engine functions the library binds to are new); skips until a release's IDE has the library
 lcs: extensions/libraries/async: TestCopyFile  # 9.6.3 has no background jobs (the engine functions the library binds to are new); skips until a release's IDE has the library
