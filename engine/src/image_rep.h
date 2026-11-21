@@ -14,6 +14,10 @@ for more details.
 You should have received a copy of the GNU General Public License
 along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 
+/* Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
+   (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
+   Seth Morrow (2026); its Git history and CHANGELOG.md say what changed. */
+
 #ifndef __MC_IMAGE_REP_H__
 #define __MC_IMAGE_REP_H__
 
@@ -30,6 +34,10 @@ typedef enum
 	kMCImageRepGImage,
 	
 	kMCImageRepResampled,
+
+	// OXT-Beyond: the pixels an image holds uncompressed while the
+	//   paintCompression is "none" (MCUncompressedImageRep).
+	kMCImageRepUncompressed,
 } MCImageRepType;
 
 struct MCGImageFrame
@@ -458,6 +466,42 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// OXT-Beyond: the pixels an image is given while the paintCompression is
+//   "none" (MCImage::setbitmap), kept as they are rather than compressed:
+//   setting the imageData of an image with transparency took 30 ms and more
+//   at 640 x 480, almost all of it in compressing it as PNG, and drawing it
+//   decompressed it again. The image compresses them when their data is
+//   needed (MCImage::ensurecompressed); until then they are what a script
+//   set, to the byte, and the image's own copy: locking the bitmap gives it
+//   without a copy, and drawing makes its premultiplied frame as the
+//   loadable reps do, in the image cache.
+class MCUncompressedImageRep : public MCLoadableImageRep
+{
+public:
+	// Takes the bitmap: the rep frees it.
+	MCUncompressedImageRep(MCImageBitmap *p_bitmap);
+	~MCUncompressedImageRep();
+
+	MCImageRepType GetType() { return kMCImageRepUncompressed; }
+	// As the other reps of plain pixels (mutable, pixel data, MCGImage) say.
+	uint32_t GetDataCompression();
+	uindex_t GetFrameCount();
+
+	bool LockBitmap(uindex_t p_index, MCGFloat p_density, MCImageBitmap *&r_bitmap);
+	void UnlockBitmap(uindex_t p_index, MCImageBitmap *p_bitmap);
+
+	// The pixels themselves, unpremultiplied; the rep owns them.
+	MCImageBitmap *GetBitmap() { return m_bitmap; }
+
+protected:
+	bool LoadImageFrames(MCBitmapFrame *&r_frames, uindex_t &r_frame_count, bool &r_premultiplied);
+	bool LoadHeader(uindex_t &r_width, uindex_t &r_height, uint32_t &r_frame_count);
+
+	MCImageBitmap *m_bitmap;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
 bool MCImageRepCreateReferencedWithSearchKey(MCStringRef p_filename, MCStringRef p_searchkey, MCImageRep *&r_rep);
 
 bool MCImageRepGetReferenced(MCStringRef p_filename, MCImageRep *&r_rep);
@@ -472,6 +516,9 @@ bool MCImageRepGetResampled(uint32_t p_width, uint32_t p_height, bool p_flip_hor
 
 // IM-2015-06-25: [[ GImageRep ]] Create image rep using MCGImageRef as source
 bool MCImageRepCreateWithGImage(MCGImageRef p_image, MCImageRep *&r_image_rep);
+
+// OXT-Beyond: a rep holding a copy of the bitmap, uncompressed.
+bool MCImageRepCreateUncompressed(MCImageBitmap *p_bitmap, MCImageRep *&r_rep);
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -398,6 +398,10 @@ static MCExecEnumTypeElementInfo _kMCInterfacePaintCompressionElementInfo[] =
 	{ "jpeg", EX_JPEG, false },
 	{ "gif", EX_GIF, false },
 	{ "rle", EX_PBM, false },
+	// OXT-Beyond: changed images hold their pixels uncompressed until their
+	//   data is needed (MCImage::setbitmap). EX_RAW, the export format of
+	//   plain pixels, is what nothing else sets this property to.
+	{ "none", EX_RAW, false },
 };
 
 static MCExecEnumTypeInfo _kMCInterfacePaintCompressionTypeInfo =

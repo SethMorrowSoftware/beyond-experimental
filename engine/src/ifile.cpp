@@ -14,6 +14,10 @@ for more details.
 You should have received a copy of the GNU General Public License
 along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 
+/* Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
+   (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
+   Seth Morrow (2026); its Git history and CHANGELOG.md say what changed. */
+
 #include "prefix.h"
 
 #include "globdefs.h"
@@ -66,7 +70,12 @@ bool MCImageCompress(MCImageBitmap *p_bitmap, bool p_dither, MCImageCompressedBi
 
 	t_mask = MCImageBitmapHasTransparency(p_bitmap, t_alpha);
 
-	if (!t_alpha && MCpaintcompression == EX_PBM)
+	// OXT-Beyond: the paintCompression "none" (EX_RAW) holds changed pixels
+	//   uncompressed (MCImage::setbitmap); when they are compressed after all,
+	//   they are compressed as "rle", the default, does.
+	Export_format t_format = MCpaintcompression == EX_RAW ? EX_PBM : MCpaintcompression;
+
+	if (!t_alpha && t_format == EX_PBM)
 	{
 		t_success = MCImageCompressRLE(p_bitmap, r_compressed);
 	}
@@ -80,12 +89,12 @@ bool MCImageCompress(MCImageBitmap *p_bitmap, bool p_dither, MCImageCompressedBi
 		t_success = nil != (t_stream = MCS_fakeopenwrite());
 		if (t_success)
 		{
-			 if (MCpaintcompression == EX_GIF)
+			 if (t_format == EX_GIF)
 			 {
 				 t_compression = F_GIF;
 				 t_success = MCImageEncodeGIF(p_bitmap, t_stream, p_dither, t_size);
 			 }
-			 else if (MCpaintcompression == EX_JPEG)
+			 else if (t_format == EX_JPEG)
 			 {
 				 t_compression = F_JPEG;
 				 t_success = MCImageEncodeJPEG(p_bitmap, nil, t_stream, t_size);
