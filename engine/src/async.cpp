@@ -89,8 +89,11 @@ static const unsigned int kMCAsyncQuitWriteWaitMs = 120 * 1000;
 static const unsigned int kMCAsyncQuitThreadWaitMs = 2 * 1000;
 
 /* CreateProcess's CREATE_NEW_CONSOLE, which shell() and "open process"
- * start their programs with (dskw32.cpp); windows.h is not included here */
+ * start their programs with (dskw32.cpp); windows.h is not included here.
+ * Only Windows uses it: clang refuses a constant that nothing uses. */
+#if defined(_WINDOWS)
 static const uint32_t kMCAsyncCreateNewConsole = 0x00000010;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 //
