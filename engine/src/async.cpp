@@ -34,6 +34,16 @@ along with OXT-Beyond.  If not see <http://www.gnu.org/licenses/>.  */
  * would: when the handlers that are running have finished, or while one of
  * them waits "with messages".
  *
+ * An extension with native code of its own has two more things here, which
+ * it binds to by name as the library does (the MCAsyncNative functions): it
+ * can have a function of its native code called on one of the jobs'
+ * threads, and it can make a wake, which its own threads signal when they
+ * have something for the script. The signal is all that such a thread does
+ * to the engine, and it comes to the script as a message, as a job's end
+ * does. "Native code that takes time, or has threads of its own" in
+ * ide/Documentation/guides/Extending OXT.md is the account for an
+ * extension's author.
+ *
  * Nothing here changes what an existing script does: shell(), "open
  * process", "put URL" and the rest block as they always have. These are
  * new calls, behind a library whose handlers come last in the message
@@ -97,6 +107,8 @@ enum MCAsyncJobKind
 	kMCAsyncJobKindShell,
 	/* A program that is talked to: its output comes as it is written */
 	kMCAsyncJobKindProcess,
+	/* A function of an extension's native code */
+	kMCAsyncJobKindCall,
 };
 
 /* What the engine keeps for a job from its start to its last event. The
@@ -159,6 +171,52 @@ static void MCAsyncRecordDestroy(MCAsyncJobRecord *p_record)
 		return;
 	MCValueRelease(p_record->message);
 	MCValueRelease(p_record->borrowed);
+	delete p_record;
+}
+
+/* What the engine keeps for a wake while it exists. The core is given the
+ * record's address as the wake's context. */
+struct MCAsyncWakeRecord
+{
+	MCAsyncWakeRecord *next = nullptr;
+
+	MCAsyncWakeId wake = 0;
+
+	/* The object whose script made the wake, which gets its message */
+	MCObjectHandle target;
+	MCNameRef message = nullptr;
+};
+
+/* Every wake there is, newest first. The main thread's. */
+static MCAsyncWakeRecord *s_wakes = nullptr;
+
+static MCAsyncWakeRecord *MCAsyncWakeRecordFind(MCAsyncWakeId p_wake)
+{
+	if (p_wake == 0)
+		return nullptr;
+	for (MCAsyncWakeRecord *t_record = s_wakes; t_record != nullptr;
+	     t_record = t_record->next)
+		if (t_record->wake == p_wake)
+			return t_record;
+	return nullptr;
+}
+
+/* End a wake: its record, and the core's wake if that is still there (a
+ * signal that comes later, with the number it had, does nothing) */
+static void MCAsyncWakeRecordDestroy(MCAsyncWakeRecord *p_record)
+{
+	if (p_record == nullptr)
+		return;
+	for (MCAsyncWakeRecord **t_link = &s_wakes; *t_link != nullptr;
+	     t_link = &(*t_link)->next)
+		if (*t_link == p_record)
+		{
+			*t_link = p_record->next;
+			break;
+		}
+	if (p_record->wake != 0)
+		MCAsyncCoreWakeDestroy(p_record->wake);
+	MCValueRelease(p_record->message);
 	delete p_record;
 }
 
@@ -308,20 +366,15 @@ static bool MCAsyncEventListingText(MCAsyncEvent& x_event, MCStringRef& r_text)
 #endif
 }
 
-/* Queue the job's message for its object, with the job's number and three
- * more parameters, as a socket's message is queued: it is delivered in its
- * turn among the pending messages. False if there is no memory. */
-static bool MCAsyncPostMessage(MCAsyncJobRecord *p_record, MCValueRef p_second,
-                               MCValueRef p_third, MCValueRef p_fourth)
+/* Queue a message for an object with these parameters, as a socket's
+ * message is queued: it is delivered in its turn among the pending
+ * messages. False if there is no memory. */
+static bool MCAsyncQueueMessage(MCObject *p_target, MCNameRef p_message,
+                                MCValueRef *p_values, unsigned int p_count)
 {
-	MCAutoNumberRef t_job;
-	if (!MCNumberCreateWithUnsignedInteger(p_record->job, &t_job))
-		return false;
-
-	MCValueRef t_values[4] = {*t_job, p_second, p_third, p_fourth};
 	MCParameter *t_first = nullptr;
 	MCParameter *t_last = nullptr;
-	for (unsigned int i = 0; i < 4; i++)
+	for (unsigned int i = 0; i < p_count; i++)
 	{
 		MCParameter *t_parameter = new (nothrow) MCParameter;
 		if (t_parameter == nullptr)
@@ -334,7 +387,7 @@ static bool MCAsyncPostMessage(MCAsyncJobRecord *p_record, MCValueRef p_second,
 			}
 			return false;
 		}
-		t_parameter->setvalueref_argument(t_values[i]);
+		t_parameter->setvalueref_argument(p_values[i]);
 		if (t_last == nullptr)
 			t_first = t_parameter;
 		else
@@ -343,9 +396,33 @@ static bool MCAsyncPostMessage(MCAsyncJobRecord *p_record, MCValueRef p_second,
 	}
 
 	/* The queue owns the parameters from here */
-	MCscreen->addmessage(p_record->target.Get(), p_record->message,
-	                     s_message_time, t_first);
+	MCscreen->addmessage(p_target, p_message, s_message_time, t_first);
 	return true;
+}
+
+/* The job's message, with the job's number and three more parameters */
+static bool MCAsyncPostMessage(MCAsyncJobRecord *p_record, MCValueRef p_second,
+                               MCValueRef p_third, MCValueRef p_fourth)
+{
+	MCAutoNumberRef t_job;
+	if (!MCNumberCreateWithUnsignedInteger(p_record->job, &t_job))
+		return false;
+
+	MCValueRef t_values[4] = {*t_job, p_second, p_third, p_fourth};
+	return MCAsyncQueueMessage(p_record->target.Get(), p_record->message,
+	                           t_values, 4);
+}
+
+/* A wake's message: <message> pWake */
+static bool MCAsyncPostWake(MCAsyncWakeRecord *p_record)
+{
+	MCAutoNumberRef t_wake;
+	if (!MCNumberCreateWithUnsignedInteger(p_record->wake, &t_wake))
+		return false;
+
+	MCValueRef t_values[1] = {*t_wake};
+	return MCAsyncQueueMessage(p_record->target.Get(), p_record->message,
+	                           t_values, 1);
 }
 
 /* An event's message. p_event's data may be taken. */
@@ -430,6 +507,28 @@ static bool MCAsyncPostEvent(MCAsyncJobRecord *p_record, MCAsyncEvent& x_event)
 static void MCAsyncHandleEvent(void *p_context, MCAsyncEvent& x_event)
 {
 	bool *t_posted = static_cast<bool *>(p_context);
+
+	if (x_event.kind == kMCAsyncEventWake)
+	{
+		MCAsyncWakeRecord *t_wake =
+				static_cast<MCAsyncWakeRecord *>(x_event.context);
+		if (t_wake == nullptr)
+			return;
+
+		/* An object that has been deleted has no use for its wakes: the
+		 * first signal after that ends the wake */
+		if (!t_wake->target.IsValid())
+			MCAsyncWakeRecordDestroy(t_wake);
+		else if (MCscreen != nullptr)
+		{
+			if (MCAsyncPostWake(t_wake))
+				*t_posted = true;
+			else
+				MCErrorReset();
+		}
+		return;
+	}
+
 	MCAsyncJobRecord *t_record =
 			static_cast<MCAsyncJobRecord *>(x_event.context);
 	if (t_record == nullptr)
@@ -501,6 +600,14 @@ static void MCAsyncDrainNotification(void *)
 static void MCAsyncWake(void *)
 {
 	s_drain_wanted.store(true);
+#if defined(_ANDROID_MOBILE)
+	/* The notification wakes the engine through Java, which a thread Java
+	 * does not know cannot call. The jobs' threads are known to it, and
+	 * MCAsyncNativeWakeSignal sees that an extension's is; if it could not,
+	 * the flag is left for the engine to find when it next looks. */
+	if (MCJavaGetThreadEnv() == nil)
+		return;
+#endif
 #if defined(FEATURE_NOTIFY)
 	if (MCNotifyIsInitialized())
 		MCNotifyPush(MCAsyncDrainNotification, nullptr, false, true);
@@ -574,6 +681,11 @@ void MCAsyncFinalize(void)
 			t_record->borrowed = nullptr;
 		MCAsyncRecordDestroy(t_record);
 	}
+
+	/* The core has destroyed its wakes: a thread that signals one now, or
+	 * at any time after, does nothing */
+	while (s_wakes != nullptr)
+		MCAsyncWakeRecordDestroy(s_wakes);
 }
 
 /* The object that gets the messages of a job started now: the one whose
@@ -593,6 +705,8 @@ enum MCAsyncAccess
 {
 	kMCAsyncAccessDisk,
 	kMCAsyncAccessProcess,
+	/* Nothing a secure mode refuses: a function of code already loaded */
+	kMCAsyncAccessNone,
 };
 
 /* The first half of starting a job: the checks, and the record. nullptr
@@ -1268,4 +1382,145 @@ extern "C" MC_DLLEXPORT_DEF void MCAsyncJobsList(MCStringRef& r_jobs)
 		MCErrorReset();
 		r_jobs = MCValueRetain(kMCEmptyString);
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  WHAT AN EXTENSION WITH NATIVE CODE BINDS TO
+//
+// For an extension whose native code would otherwise hold the engine up, or
+// has threads of its own. Bound by name with "<builtin>", as the functions
+// above are; on the main thread, bar MCAsyncNativeWakeSignal.
+
+/* Call a function of native code, void (*)(void *), with p_context on
+ * another thread. The object whose script is running is sent
+ * "<message> pJob, empty, pError, 0" when it has returned (pError is
+ * "cancelled" if the call was cancelled before it was made, or else empty).
+ * Returns the job's number, which the library's asyncCancel and asyncStatus
+ * take, or 0 with an error thrown.
+ *
+ * The function must not touch the engine: no value, no handler, no call of
+ * the engine but MCAsyncNativeWakeSignal. What p_context points to must stay
+ * until the message. In a browser, where there are no threads, the function
+ * is called before this returns. */
+extern "C" MC_DLLEXPORT_DEF uint32_t MCAsyncNativeCall(void *p_function, void *p_context, MCStringRef p_message)
+{
+	static const char *kHandler = "MCAsyncNativeCall";
+	if (p_function == nullptr)
+	{
+		MCAsyncThrow(kHandler, "no function to call");
+		return 0;
+	}
+
+	MCAsyncJobRecord *t_record = MCAsyncBegin(
+			kHandler, kMCAsyncJobKindCall, kMCAsyncAccessNone, p_message);
+	if (t_record == nullptr)
+		return 0;
+
+	return MCAsyncStarted(
+			t_record, kHandler,
+			MCAsyncCoreCall(reinterpret_cast<MCAsyncNativeFunction>(p_function),
+			                p_context, t_record));
+}
+
+/* Make a wake: the object whose script is running is sent "<message> pWake"
+ * after the wake has been signalled, once for however many signals came
+ * since the message was last queued. Returns the wake's number (never 0), or
+ * 0 with an error thrown. A wake lasts until it is deleted, its object is
+ * deleted, or the engine quits. */
+extern "C" MC_DLLEXPORT_DEF uint32_t MCAsyncNativeWakeCreate(MCStringRef p_message)
+{
+	static const char *kHandler = "MCAsyncNativeWakeCreate";
+	if (MCStringIsEmpty(p_message))
+	{
+		MCAsyncThrow(kHandler, "no message to send when the wake is signalled");
+		return 0;
+	}
+
+	MCObject *t_target = MCAsyncCallerObject();
+	if (t_target == nullptr)
+		return 0;
+
+	if (!MCAsyncEnsureStarted())
+	{
+		MCAsyncThrow(kHandler, "out of memory");
+		return 0;
+	}
+
+	MCAsyncWakeRecord *t_record = new (nothrow) MCAsyncWakeRecord;
+	if (t_record == nullptr || !MCNameCreate(p_message, t_record->message))
+	{
+		MCAsyncWakeRecordDestroy(t_record);
+		MCErrorReset();
+		MCAsyncThrow(kHandler, "out of memory");
+		return 0;
+	}
+	t_record->target = t_target->GetHandle();
+
+	t_record->wake = MCAsyncCoreWakeCreate(t_record);
+	if (t_record->wake == 0)
+	{
+		MCAsyncWakeRecordDestroy(t_record);
+		MCAsyncThrow(kHandler, "too many wakes");
+		return 0;
+	}
+
+	t_record->next = s_wakes;
+	s_wakes = t_record;
+	MCAsyncDrainIfWanted();
+	return t_record->wake;
+}
+
+/* Delete a wake: no message of it is queued after this (one already queued
+ * is still delivered), and signalling it does nothing. False if there is no
+ * such wake. */
+extern "C" MC_DLLEXPORT_DEF bool MCAsyncNativeWakeDelete(uint32_t p_wake)
+{
+	MCAsyncWakeRecord *t_record = MCAsyncWakeRecordFind(p_wake);
+	if (t_record == nullptr)
+		return false;
+	MCAsyncWakeRecordDestroy(t_record);
+	return true;
+}
+
+/* Signal a wake. ON ANY THREAD, AT ANY TIME: it is what an extension's
+ * native code calls from a thread of its own, with what
+ * MCAsyncNativeWakeContext gave for the wake. It takes a lock for a moment,
+ * allocates nothing, waits for nothing and touches no value of the engine.
+ * A wake that has been deleted, or any other pointer, does nothing. */
+extern "C" MC_DLLEXPORT_DEF void MCAsyncNativeWakeSignal(void *p_wake_context)
+{
+	MCAsyncWakeId t_wake = static_cast<MCAsyncWakeId>(
+			reinterpret_cast<uintptr_t>(p_wake_context));
+
+#if defined(_ANDROID_MOBILE)
+	/* The engine is woken through Java (MCAsyncWake), which has to know
+	 * the thread for as long as that takes */
+	bool t_attached = false;
+	if (MCJavaGetThreadEnv() == nil)
+		t_attached = MCJavaAttachCurrentThread() != nil;
+#endif
+
+	MCAsyncCoreWakeSignal(t_wake);
+
+#if defined(_ANDROID_MOBILE)
+	if (t_attached)
+		MCJavaDetachCurrentThread();
+#endif
+}
+
+/* The address of MCAsyncNativeWakeSignal, a void (*)(void *), for an
+ * extension to give its native code: the engine's functions are found by
+ * name from an extension's Builder code on every platform, and from native
+ * code on few */
+extern "C" MC_DLLEXPORT_DEF void *MCAsyncNativeWakeFunction(void)
+{
+	return reinterpret_cast<void *>(MCAsyncNativeWakeSignal);
+}
+
+/* What to call that function with to signal p_wake. Not an address:
+ * nothing is to be read from it, or freed. */
+extern "C" MC_DLLEXPORT_DEF void *MCAsyncNativeWakeContext(uint32_t p_wake)
+{
+	return reinterpret_cast<void *>(static_cast<uintptr_t>(p_wake));
 }

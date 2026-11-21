@@ -54,6 +54,17 @@ MC_DLLEXPORT void MCAsyncJobsStatus(MCValueRef p_job, MCStringRef& r_status);
 MC_DLLEXPORT void MCAsyncJobsProgress(MCValueRef p_job, MCStringRef& r_progress);
 MC_DLLEXPORT void MCAsyncJobsList(MCStringRef& r_jobs);
 
+/* For an extension with native code (see async.cpp, and "Native code that
+ * takes time, or has threads of its own" in
+ * ide/Documentation/guides/Extending OXT.md). Main thread only, bar
+ * MCAsyncNativeWakeSignal, which is for any thread at any time. */
+MC_DLLEXPORT uint32_t MCAsyncNativeCall(void *p_function, void *p_context, MCStringRef p_message);
+MC_DLLEXPORT uint32_t MCAsyncNativeWakeCreate(MCStringRef p_message);
+MC_DLLEXPORT bool MCAsyncNativeWakeDelete(uint32_t p_wake);
+MC_DLLEXPORT void MCAsyncNativeWakeSignal(void *p_wake_context);
+MC_DLLEXPORT void *MCAsyncNativeWakeFunction(void);
+MC_DLLEXPORT void *MCAsyncNativeWakeContext(uint32_t p_wake);
+
 }
 
 #endif

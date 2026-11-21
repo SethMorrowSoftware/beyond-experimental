@@ -93,8 +93,9 @@ static const MCSLibraryStaticExport kMCEmscriptenDBSQLiteExports[] =
 /* The engine's own functions that extensions bind to with "<builtin>",
  * which a desktop engine finds by name in its executable: the xTalk suite's
  * libraries make and read Data with them, the tree view widget decodes
- * text with MCStringDecode, and the Background Jobs library starts its jobs
- * with the MCAsyncJobs functions (async.cpp). Each address is taken as the
+ * text with MCStringDecode, the Background Jobs library starts its jobs
+ * with the MCAsyncJobs functions, and an extension with native code has the
+ * MCAsyncNative functions (async.cpp). Each address is taken as the
  * function's own type, so that it is the function the definition is (an
  * overload or a template of the same name is not). */
 static const MCSLibraryStaticExport kMCEmscriptenEngineExports[] =
@@ -120,6 +121,12 @@ static const MCSLibraryStaticExport kMCEmscriptenEngineExports[] =
 	{ "MCAsyncJobsStatus", reinterpret_cast<void *>(MCAsyncJobsStatus) },
 	{ "MCAsyncJobsProgress", reinterpret_cast<void *>(MCAsyncJobsProgress) },
 	{ "MCAsyncJobsList", reinterpret_cast<void *>(MCAsyncJobsList) },
+	{ "MCAsyncNativeCall", reinterpret_cast<void *>(MCAsyncNativeCall) },
+	{ "MCAsyncNativeWakeCreate", reinterpret_cast<void *>(MCAsyncNativeWakeCreate) },
+	{ "MCAsyncNativeWakeDelete", reinterpret_cast<void *>(MCAsyncNativeWakeDelete) },
+	{ "MCAsyncNativeWakeSignal", reinterpret_cast<void *>(MCAsyncNativeWakeSignal) },
+	{ "MCAsyncNativeWakeFunction", reinterpret_cast<void *>(MCAsyncNativeWakeFunction) },
+	{ "MCAsyncNativeWakeContext", reinterpret_cast<void *>(MCAsyncNativeWakeContext) },
 	{ nullptr, nullptr },
 };
 
