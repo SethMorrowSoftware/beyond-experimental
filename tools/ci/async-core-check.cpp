@@ -419,6 +419,12 @@ static bool make_folder(const char *p_path)
 static void check_lifecycle(void)
 {
 	check(!MCAsyncCoreIsInitialized(), "the core is not initialized at first", 0);
+	/* (Before any core there is not even the wakes' lock, when this is the
+	 * first group to run) */
+	MCAsyncCoreWakeSignal(0);
+	MCAsyncCoreWakeSignal(0x101);
+	check(MCAsyncCoreWakeCreate(nullptr) == 0 && !MCAsyncCoreWakeDestroy(0x101),
+	      "without the core no wake is made, and signalling one does nothing", 0);
 	check(MCAsyncCoreReadFile(path_in(0, "x"), nullptr) == 0,
 	      "no job starts without the core", 0);
 	check(MCAsyncCoreFinalize(0), "finalizing nothing is nothing", 0);
@@ -1583,6 +1589,405 @@ static void check_process_cancel(void)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//
+//  NATIVE CALLS AND WAKES
+//
+
+/* A thread of the check's own, as a native library has: not one of the
+ * core's */
+struct CheckThreadStart
+{
+	void (*function)(void *);
+	void *argument;
+};
+
+#if defined(_WIN32)
+typedef HANDLE CheckThread;
+
+static DWORD WINAPI check_thread_main(LPVOID p_argument)
+{
+	CheckThreadStart *t_start = (CheckThreadStart *)p_argument;
+	t_start->function(t_start->argument);
+	free(t_start);
+	return 0;
+}
+#else
+typedef pthread_t CheckThread;
+
+static void *check_thread_main(void *p_argument)
+{
+	CheckThreadStart *t_start = (CheckThreadStart *)p_argument;
+	t_start->function(t_start->argument);
+	free(t_start);
+	return nullptr;
+}
+#endif
+
+static CheckThread check_thread_start(void (*p_function)(void *), void *p_argument)
+{
+	CheckThreadStart *t_start =
+			(CheckThreadStart *)malloc(sizeof(CheckThreadStart));
+	t_start->function = p_function;
+	t_start->argument = p_argument;
+#if defined(_WIN32)
+	return CreateThread(nullptr, 0, check_thread_main, t_start, 0, nullptr);
+#else
+	pthread_t t_thread;
+	pthread_create(&t_thread, nullptr, check_thread_main, t_start);
+	return t_thread;
+#endif
+}
+
+static void check_thread_join(CheckThread p_thread)
+{
+#if defined(_WIN32)
+	WaitForSingleObject(p_thread, INFINITE);
+	CloseHandle(p_thread);
+#else
+	pthread_join(p_thread, nullptr);
+#endif
+}
+
+static bool on_main_thread(void)
+{
+#if defined(_WIN32)
+	return GetCurrentThreadId() == s_main_thread;
+#else
+	return pthread_equal(pthread_self(), s_main_thread) != 0;
+#endif
+}
+
+/* What the check's native functions are called with */
+struct CallState
+{
+	std::atomic<int> calls;
+	std::atomic<int> on_main;
+	std::atomic<int> entered;
+	std::atomic<bool> release;
+};
+
+static void call_state_reset(CallState& x_state)
+{
+	x_state.calls.store(0);
+	x_state.on_main.store(0);
+	x_state.entered.store(0);
+	x_state.release.store(false);
+}
+
+static void native_count(void *p_context)
+{
+	CallState *t_state = (CallState *)p_context;
+	if (on_main_thread())
+		t_state->on_main++;
+	t_state->calls++;
+}
+
+/* Returns when it is let go */
+static void native_block(void *p_context)
+{
+	CallState *t_state = (CallState *)p_context;
+	t_state->entered++;
+	while (!t_state->release.load())
+		sleep_ms(1);
+	t_state->calls++;
+}
+
+static bool wait_until_entered(CallState& p_state, int p_count, unsigned int p_ms)
+{
+	unsigned long long t_until = now_ms() + p_ms;
+	while (p_state.entered.load() < p_count && now_ms() < t_until)
+		sleep_ms(1);
+	return p_state.entered.load() >= p_count;
+}
+
+static void check_native_calls(void)
+{
+	static CallState s_state;
+	start_core();
+
+	call_state_reset(s_state);
+	int t_marker = 0;
+	MCAsyncJobId t_call = MCAsyncCoreCall(native_count, &s_state, &t_marker);
+	check(t_call != 0, "a native call is a job", 0);
+	Seen *t_done = wait_done(t_call, 10000);
+	check(t_done != nullptr && t_done->error == kMCAsyncErrorNone &&
+	      t_done->context == &t_marker && t_done->length == 0,
+	      "which ends when the function has returned", 0);
+	check(s_state.calls == 1 && s_state.on_main == 0,
+	      "the function was called once, on another thread", s_state.calls);
+	check(MCAsyncCoreCall(nullptr, nullptr, nullptr) == 0,
+	      "no function is no job", 0);
+
+	/* Many: each is called, and each ends once */
+	call_state_reset(s_state);
+	forget_events();
+	MCAsyncJobId t_calls[50];
+	for (int i = 0; i < 50; i++)
+		t_calls[i] = MCAsyncCoreCall(native_count, &s_state, nullptr);
+	bool t_all = true;
+	for (int i = 0; i < 50; i++)
+		t_all = t_all && t_calls[i] != 0 &&
+				wait_done(t_calls[i], 10000) != nullptr &&
+				count_done(t_calls[i]) == 1;
+	check(t_all && s_state.calls == 50, "fifty calls are each made and each end once",
+	      s_state.calls);
+
+	/* Calls that do not return: 4 are being made (the check's limit), the
+	 * rest wait, and the file jobs go on beside them */
+	call_state_reset(s_state);
+	forget_events();
+	MCAsyncJobId t_blocked[6];
+	for (int i = 0; i < 6; i++)
+		t_blocked[i] = MCAsyncCoreCall(native_block, &s_state, nullptr);
+	check(wait_until_entered(s_state, 4, 10000), "four long calls are made at once",
+	      s_state.entered);
+	sleep_ms(50);
+	check(s_state.entered == 4 &&
+	      MCAsyncCoreStatus(t_blocked[5]) == kMCAsyncStatusQueued,
+	      "and the rest wait for a thread", s_state.entered);
+
+	MCAsyncJobId t_write = MCAsyncCoreWriteFile(path_in(0, "beside-calls.txt"),
+	                                            "beside", 6, false, nullptr);
+	check(wait_done(t_write, 10000) != nullptr &&
+	      file_is(path_in(0, "beside-calls.txt"), "beside", 6),
+	      "a file job is done while every call's thread is held", 0);
+
+	check(MCAsyncCoreCancel(t_blocked[5]) && MCAsyncCoreCancel(t_blocked[0]),
+	      "a call that waits and one that is being made are cancelled", 0);
+	s_state.release.store(true);
+	bool t_ended = true;
+	for (int i = 0; i < 6; i++)
+		t_ended = t_ended && wait_done(t_blocked[i], 10000) != nullptr;
+	check(t_ended, "every call ends when the functions return", 0);
+	check(find_done(t_blocked[5]) != nullptr &&
+	      find_done(t_blocked[5])->error == kMCAsyncErrorCancelled &&
+	      s_state.calls == 5,
+	      "the one cancelled while it waited was never made", s_state.calls);
+	check(find_done(t_blocked[0]) != nullptr &&
+	      find_done(t_blocked[0])->error == kMCAsyncErrorNone,
+	      "and the one being made was not interrupted", 0);
+
+	/* A call still being made when the core is finalized: the wait gives up */
+	call_state_reset(s_state);
+	MCAsyncJobId t_stuck = MCAsyncCoreCall(native_block, &s_state, nullptr);
+	check(t_stuck != 0 && wait_until_entered(s_state, 1, 10000),
+	      "a call is being made", 0);
+	bool t_all_ended = MCAsyncCoreFinalize(100);
+	forget_events();
+	check(!t_all_ended, "finalizing does not wait for a call that does not return", 0);
+	s_state.release.store(true);
+	unsigned long long t_until = now_ms() + 10000;
+	while (s_state.calls.load() == 0 && now_ms() < t_until)
+		sleep_ms(1);
+	/* (its thread lets go of the core after the function returns) */
+	sleep_ms(100);
+	check(s_state.calls == 1, "which returns later, to a core that has gone", 0);
+
+	/* Without threads the call is made where it is asked for */
+	MCAsyncCoreSetThreadLimit(0);
+	start_core();
+	call_state_reset(s_state);
+	MCAsyncJobId t_inline = MCAsyncCoreCall(native_count, &s_state, nullptr);
+	check(t_inline != 0 && s_state.calls == 1 && s_state.on_main == 1,
+	      "without threads the function is called before the call returns", 0);
+	drain();
+	check(find_done(t_inline) != nullptr &&
+	      find_done(t_inline)->error == kMCAsyncErrorNone,
+	      "and its end is given at the next drain", 0);
+	check(stop_core(), "the core finalizes", 0);
+	MCAsyncCoreSetThreadLimit(4);
+}
+
+/* The Wake events seen for a wake */
+static int count_wakes(MCAsyncWakeId p_wake)
+{
+	int t_count = 0;
+	for (Seen *t_seen = s_seen_first; t_seen != nullptr; t_seen = t_seen->next)
+		if (t_seen->job == p_wake && t_seen->kind == kMCAsyncEventWake)
+			t_count++;
+	return t_count;
+}
+
+/* Wait for a wake's event, draining as the core wakes */
+static bool wait_wake(MCAsyncWakeId p_wake, int p_count, unsigned int p_ms)
+{
+	unsigned long long t_until = now_ms() + p_ms;
+	for (;;)
+	{
+		drain();
+		if (count_wakes(p_wake) >= p_count)
+			return true;
+		unsigned long long t_now = now_ms();
+		if (t_now >= t_until)
+			return false;
+		wait_for_wake((unsigned int)(t_until - t_now < 200 ? t_until - t_now
+		                                                    : 200));
+	}
+}
+
+struct Signaller
+{
+	MCAsyncWakeId wake;
+	int times;
+	/* Go on until told to stop instead */
+	std::atomic<bool> *stop;
+	std::atomic<int> *signals;
+};
+
+static void signaller_main(void *p_argument)
+{
+	Signaller *t_signaller = (Signaller *)p_argument;
+	if (t_signaller->stop != nullptr)
+	{
+		while (!t_signaller->stop->load())
+		{
+			MCAsyncCoreWakeSignal(t_signaller->wake);
+			if (t_signaller->signals != nullptr)
+				(*t_signaller->signals)++;
+		}
+		return;
+	}
+	for (int i = 0; i < t_signaller->times; i++)
+		MCAsyncCoreWakeSignal(t_signaller->wake);
+}
+
+static void check_wakes(void)
+{
+	start_core();
+
+	int t_first_marker = 0, t_second_marker = 0;
+	MCAsyncWakeId t_first = MCAsyncCoreWakeCreate(&t_first_marker);
+	MCAsyncWakeId t_second = MCAsyncCoreWakeCreate(&t_second_marker);
+	check(t_first != 0 && t_second != 0 && t_first != t_second,
+	      "two wakes have two numbers", 0);
+	drain();
+	check(s_seen_count == 0, "a wake that was not signalled gives no event",
+	      s_seen_count);
+
+	/* From a thread that is not the core's */
+	int t_wakes_before = s_wakes.load();
+	Signaller t_once = {t_first, 1, nullptr, nullptr};
+	check_thread_join(check_thread_start(signaller_main, &t_once));
+	check(s_wakes > t_wakes_before,
+	      "a wake signalled on another thread wakes the main thread", 0);
+	check(wait_wake(t_first, 1, 10000), "and the drain gives its event", 0);
+	Seen *t_event = s_seen_first;
+	check(t_event != nullptr && t_event->kind == kMCAsyncEventWake &&
+	      t_event->job == t_first && t_event->context == &t_first_marker &&
+	      t_event->length == 0 && t_event->error == kMCAsyncErrorNone,
+	      "with the wake's number and what it was made with", 0);
+	check(count_wakes(t_second) == 0, "the other wake has none", 0);
+
+	/* Many signals from many threads are one event */
+	forget_events();
+	Signaller t_many = {t_second, 1000, nullptr, nullptr};
+	CheckThread t_threads[4];
+	for (int i = 0; i < 4; i++)
+		t_threads[i] = check_thread_start(signaller_main, &t_many);
+	for (int i = 0; i < 4; i++)
+		check_thread_join(t_threads[i]);
+	drain();
+	check(count_wakes(t_second) == 1 && s_seen_count == 1,
+	      "four thousand signals before a drain are one event", count_wakes(t_second));
+	drain();
+	check(s_seen_count == 1, "which is given once", s_seen_count);
+	MCAsyncCoreWakeSignal(t_second);
+	drain();
+	check(count_wakes(t_second) == 2, "a signal after the drain is another event",
+	      count_wakes(t_second));
+
+	/* Both at once, and on the main thread too */
+	forget_events();
+	MCAsyncCoreWakeSignal(t_first);
+	MCAsyncCoreWakeSignal(t_second);
+	drain();
+	check(count_wakes(t_first) == 1 && count_wakes(t_second) == 1,
+	      "each wake that was signalled has its own event", s_seen_count);
+
+	/* Destroyed: its number names nothing */
+	forget_events();
+	MCAsyncCoreWakeSignal(t_first);
+	check(MCAsyncCoreWakeDestroy(t_first), "a wake is destroyed", 0);
+	drain();
+	check(s_seen_count == 0, "and the signal it had is not given", s_seen_count);
+	check(!MCAsyncCoreWakeDestroy(t_first), "it is destroyed once", 0);
+	MCAsyncWakeId t_third = MCAsyncCoreWakeCreate(nullptr);
+	check(t_third != 0 && t_third != t_first,
+	      "the next wake has a number of its own", 0);
+	MCAsyncCoreWakeSignal(t_first);
+	MCAsyncCoreWakeSignal(0);
+	MCAsyncCoreWakeSignal(0xffffffffu);
+	MCAsyncCoreWakeSignal(t_third ^ 0x100);
+	drain();
+	check(s_seen_count == 0,
+	      "signalling the old number, or none, or nonsense, does nothing",
+	      s_seen_count);
+	MCAsyncCoreWakeDestroy(t_third);
+	MCAsyncCoreWakeDestroy(t_second);
+
+	/* As many as there is room for */
+	static MCAsyncWakeId s_all[300];
+	int t_made = 0;
+	for (int i = 0; i < 300; i++)
+	{
+		s_all[i] = MCAsyncCoreWakeCreate(nullptr);
+		if (s_all[i] != 0)
+			t_made++;
+	}
+	check(t_made == 256 && s_all[255] != 0 && s_all[256] == 0,
+	      "there is room for 256 wakes, and no more", t_made);
+	bool t_distinct = true;
+	for (int i = 0; i < 256 && t_distinct; i++)
+		for (int j = i + 1; j < 256 && t_distinct; j++)
+			t_distinct = s_all[i] != s_all[j];
+	check(t_distinct, "each with its own number", 0);
+	forget_events();
+	for (int i = 0; i < 256; i++)
+		MCAsyncCoreWakeSignal(s_all[i]);
+	drain();
+	check(s_seen_count == 256, "all signalled, all are given", s_seen_count);
+	for (int i = 0; i < 256; i++)
+		MCAsyncCoreWakeDestroy(s_all[i]);
+	MCAsyncWakeId t_after = MCAsyncCoreWakeCreate(nullptr);
+	check(t_after != 0, "and when they are destroyed there is room again", 0);
+
+	/* Threads that never stop signalling, while the wake is destroyed and
+	 * the core finalized and started again under them */
+	forget_events();
+	std::atomic<bool> t_stop(false);
+	std::atomic<int> t_signals(0);
+	Signaller t_forever = {t_after, 0, &t_stop, &t_signals};
+	for (int i = 0; i < 4; i++)
+		t_threads[i] = check_thread_start(signaller_main, &t_forever);
+	check(wait_wake(t_after, 3, 10000),
+	      "a wake signalled without end gives event after event", count_wakes(t_after));
+	check(stop_core(), "the core finalizes while threads signal its wake", 0);
+	int t_signals_then = t_signals.load();
+	unsigned long long t_until = now_ms() + 10000;
+	while (t_signals.load() < t_signals_then + 1000 && now_ms() < t_until)
+		sleep_ms(1);
+	check(t_signals.load() >= t_signals_then + 1000,
+	      "signals after that do nothing, and harm nothing", 0);
+
+	start_core();
+	MCAsyncWakeId t_new = MCAsyncCoreWakeCreate(nullptr);
+	sleep_ms(20);
+	drain();
+	check(t_new != 0 && t_new != t_after && s_seen_count == 0,
+	      "a new core's wake is not the old one, which still names nothing",
+	      s_seen_count);
+	MCAsyncCoreWakeSignal(t_new);
+	check(wait_wake(t_new, 1, 10000), "and the new wake works", 0);
+	t_stop.store(true);
+	for (int i = 0; i < 4; i++)
+		check_thread_join(t_threads[i]);
+	check(stop_core(), "the core finalizes", 0);
+	MCAsyncCoreWakeSignal(t_new);
+	check(!MCAsyncCoreWakeDestroy(t_new),
+	      "finalizing destroyed the wakes it had", 0);
+}
+
 struct Group
 {
 	const char *name;
@@ -1603,6 +2008,8 @@ static const Group kGroups[] =
 	{"process", check_process},
 	{"process-volume", check_process_volume},
 	{"process-cancel", check_process_cancel},
+	{"native-calls", check_native_calls},
+	{"wakes", check_wakes},
 };
 
 int main(int p_count, char **p_arguments)

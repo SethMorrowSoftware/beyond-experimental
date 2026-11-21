@@ -513,6 +513,17 @@ enum JobKind
 	kJobCopy,
 	kJobList,
 	kJobProcess,
+	kJobCall,
+};
+
+/* The threads that take jobs from a queue, in two pools: one for the file
+ * jobs and one for the native calls, which may be long, so that neither
+ * kind waits for a thread the other holds */
+enum
+{
+	kPoolFiles = 0,
+	kPoolCalls,
+	kPoolCount,
 };
 
 struct QueuedEvent
@@ -542,7 +553,14 @@ struct Job
 	bool append;
 	bool recursive;
 
+	/* A native call's */
+	MCAsyncNativeFunction function;
+	void *function_context;
+
 	Process *process;
+
+	/* The pool whose queue the job waits in */
+	unsigned int pool;
 
 	/* The rest is the Core's, behind its lock */
 	Job *table_next;
@@ -554,13 +572,26 @@ struct Job
 	QueuedEvent *done_event;
 };
 
+/* Behind the Core's lock */
+struct Pool
+{
+	Job *queue_first;
+	Job *queue_last;
+	/* How many jobs the queue holds */
+	unsigned int queue_length;
+	unsigned int threads;
+	/* How many of the threads have taken a job and not yet finished it */
+	unsigned int threads_busy;
+	unsigned int thread_limit;
+	/* The pool's threads wait here for a job */
+	Condition work;
+};
+
 struct Core
 {
 	std::atomic<int> references;
 
 	Lock lock;
-	/* File threads wait here for a job */
-	Condition work;
 	/* MCAsyncCoreFinalize waits here for the threads to end */
 	Condition ended;
 
@@ -574,12 +605,8 @@ struct Core
 	Job *table[kMCAsyncTableSize];
 	MCAsyncJobId last_id;
 
-	Job *queue_first;
-	Job *queue_last;
-	unsigned int file_threads;
-	unsigned int file_threads_waiting;
-	unsigned int file_thread_limit;
-	/* Every thread that has not ended, file and process */
+	Pool pools[kPoolCount];
+	/* Every thread that has not ended: the pools' and the processes' */
 	unsigned int threads;
 
 	QueuedEvent *events_first;
@@ -590,9 +617,9 @@ struct Core
 Core *s_core = nullptr;
 
 #if defined(__EMSCRIPTEN__)
-unsigned int s_file_thread_limit = 0;
+unsigned int s_thread_limits[kPoolCount] = {0, 0};
 #else
-unsigned int s_file_thread_limit = 4;
+unsigned int s_thread_limits[kPoolCount] = {4, 8};
 #endif
 
 void ProcessFree(Process *p_process);
@@ -622,7 +649,10 @@ JobCreate(JobKind p_kind, void *p_context)
 	t_job->length = 0;
 	t_job->append = false;
 	t_job->recursive = false;
+	t_job->function = nullptr;
+	t_job->function_context = nullptr;
 	t_job->process = nullptr;
+	t_job->pool = kPoolFiles;
 	t_job->table_next = nullptr;
 	t_job->queue_next = nullptr;
 	t_job->status = kMCAsyncStatusNone;
@@ -699,8 +729,19 @@ JobUnregister(Core *p_core, Job *p_job)
 	p_job->status = kMCAsyncStatusNone;
 }
 
-/* With the lock held: queue an event and wake the main thread, unless it
- * has been woken and has not drained the queue since */
+/* With the lock held: wake the main thread, unless it has been woken and
+ * has not drained since */
+void
+CoreWake(Core *p_core)
+{
+	if (!p_core->wake_sent && p_core->wake != nullptr)
+	{
+		p_core->wake_sent = true;
+		p_core->wake(p_core->wake_context);
+	}
+}
+
+/* With the lock held: queue an event and wake the main thread */
 void
 EventQueue(Core *p_core, QueuedEvent *p_event)
 {
@@ -711,11 +752,7 @@ EventQueue(Core *p_core, QueuedEvent *p_event)
 		p_core->events_first = p_event;
 	p_core->events_last = p_event;
 
-	if (!p_core->wake_sent && p_core->wake != nullptr)
-	{
-		p_core->wake_sent = true;
-		p_core->wake(p_core->wake_context);
-	}
+	CoreWake(p_core);
 }
 
 /* End a job: queue its Done event. p_data is handed over. On any thread. */
@@ -1624,9 +1661,9 @@ ListFolderChild(const PathChar *p_folder, const char *p_name)
 
 #endif
 
-/* Run a file job to its end, on whatever thread */
+/* Run a job of a pool to its end, on whatever thread */
 void
-RunFileJob(Core *p_core, Job *p_job)
+RunQueuedJob(Core *p_core, Job *p_job)
 {
 	Outcome t_outcome = {kMCAsyncErrorNone, 0, nullptr, 0};
 
@@ -1649,6 +1686,9 @@ RunFileJob(Core *p_core, Job *p_job)
 		case kJobList:
 			RunListFolder(p_core, p_job, t_outcome);
 			break;
+		case kJobCall:
+			p_job->function(p_job->function_context);
+			break;
 		case kJobProcess:
 			break;
 		}
@@ -1658,16 +1698,17 @@ RunFileJob(Core *p_core, Job *p_job)
 	          t_outcome.length);
 }
 
-/* With the lock held: the next file job that waits, or nullptr */
+/* With the lock held: the next job that waits in a pool, or nullptr */
 Job *
-QueuePop(Core *p_core)
+QueuePop(Pool *p_pool)
 {
-	Job *t_job = p_core->queue_first;
+	Job *t_job = p_pool->queue_first;
 	if (t_job == nullptr)
 		return nullptr;
-	p_core->queue_first = t_job->queue_next;
-	if (p_core->queue_first == nullptr)
-		p_core->queue_last = nullptr;
+	p_pool->queue_first = t_job->queue_next;
+	if (p_pool->queue_first == nullptr)
+		p_pool->queue_last = nullptr;
+	p_pool->queue_length -= 1;
 	t_job->queue_next = nullptr;
 	return t_job;
 }
@@ -1680,94 +1721,165 @@ ThreadEnded(Core *p_core)
 	p_core->ended.Broadcast();
 }
 
-void
-FileThread(void *p_argument)
+/* What a pool's thread is started with: the thread frees it */
+struct PoolThreadStart
 {
-	Core *t_core = static_cast<Core *>(p_argument);
+	Core *core;
+	Pool *pool;
+};
+
+void
+PoolThread(void *p_argument)
+{
+	PoolThreadStart *t_start = static_cast<PoolThreadStart *>(p_argument);
+	Core *t_core = t_start->core;
+	Pool *t_pool = t_start->pool;
+	free(t_start);
 
 	t_core->lock.Enter();
 	for (;;)
 	{
-		while (!t_core->shutdown && t_core->queue_first == nullptr)
-		{
-			t_core->file_threads_waiting += 1;
-			t_core->work.Wait(t_core->lock);
-			t_core->file_threads_waiting -= 1;
-		}
+		while (!t_core->shutdown && t_pool->queue_first == nullptr)
+			t_pool->work.Wait(t_core->lock);
 		if (t_core->shutdown)
 			break;
 
-		Job *t_job = QueuePop(t_core);
+		Job *t_job = QueuePop(t_pool);
 		t_job->status = kMCAsyncStatusRunning;
+		t_pool->threads_busy += 1;
 		t_core->lock.Leave();
 
-		RunFileJob(t_core, t_job);
+		RunQueuedJob(t_core, t_job);
 		JobRelease(t_job);
 
 		t_core->lock.Enter();
+		t_pool->threads_busy -= 1;
 	}
-	t_core->file_threads -= 1;
+	t_pool->threads -= 1;
 	ThreadEnded(t_core);
 	t_core->lock.Leave();
 
 	CoreRelease(t_core);
 }
 
-/* Put a new file job in the table and the queue, and see that a thread
- * will take it; without threads, run it here. Takes the job. */
+/* Put a new job in the table and in its pool's queue, and see that a
+ * thread will take it; without threads, run it here. Takes the job. */
 MCAsyncJobId
-FileJobStart(Job *p_job)
+QueuedJobStart(Job *p_job, unsigned int p_pool)
 {
 	Core *t_core = s_core;
+	Pool *t_pool = &t_core->pools[p_pool];
+
+	/* Before the lock: a thread is given this, and frees it */
+	PoolThreadStart *t_start = static_cast<PoolThreadStart *>(
+			malloc(sizeof(PoolThreadStart)));
 
 	t_core->lock.Enter();
 
 	JobRegister(t_core, p_job);
 	MCAsyncJobId t_id = p_job->id;
 	p_job->status = kMCAsyncStatusQueued;
+	p_job->pool = p_pool;
 
 	/* The queue's count, which the thread that runs the job releases */
 	p_job->references.fetch_add(1);
-	if (t_core->queue_last != nullptr)
-		t_core->queue_last->queue_next = p_job;
+	if (t_pool->queue_last != nullptr)
+		t_pool->queue_last->queue_next = p_job;
 	else
-		t_core->queue_first = p_job;
-	t_core->queue_last = p_job;
+		t_pool->queue_first = p_job;
+	t_pool->queue_last = p_job;
+	t_pool->queue_length += 1;
 
-	if (t_core->file_threads_waiting == 0 &&
-	    t_core->file_threads < t_core->file_thread_limit)
+	/* A thread for the job, when every thread there is has a job to take
+	 * or to finish. (To ask instead whether a thread is waiting would count
+	 * one thread for every job queued before it has woken: six jobs asked
+	 * for together were then run one after another.) */
+	if (t_start != nullptr &&
+	    t_pool->queue_length > t_pool->threads - t_pool->threads_busy &&
+	    t_pool->threads < t_pool->thread_limit)
 	{
+		t_start->core = t_core;
+		t_start->pool = t_pool;
 		t_core->references.fetch_add(1);
-		if (ThreadCreate(FileThread, t_core, t_core->thread_callback))
+		if (ThreadCreate(PoolThread, t_start, t_core->thread_callback))
 		{
-			t_core->file_threads += 1;
+			t_pool->threads += 1;
 			t_core->threads += 1;
+			t_start = nullptr;
 		}
 		else
 			t_core->references.fetch_sub(1);
 	}
 
-	bool t_here = t_core->file_threads == 0;
+	bool t_here = t_pool->threads == 0;
 	if (!t_here)
-		t_core->work.Signal();
+		t_pool->work.Signal();
 
 	t_core->lock.Leave();
+
+	free(t_start);
 
 	while (t_here)
 	{
 		t_core->lock.Enter();
-		Job *t_job = QueuePop(t_core);
+		Job *t_job = QueuePop(t_pool);
 		if (t_job != nullptr)
 			t_job->status = kMCAsyncStatusRunning;
 		t_core->lock.Leave();
 		if (t_job == nullptr)
 			break;
 
-		RunFileJob(t_core, t_job);
+		RunQueuedJob(t_core, t_job);
 		JobRelease(t_job);
 	}
 
 	return t_id;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  WAKES
+//
+
+/* The wakes are not the core's. A thread of some library may signal one at
+ * any time, when there may be no core to ask, so they are in a table that
+ * is never freed, behind a lock that is never destroyed (it is made with
+ * the first core, on the main thread). That lock is taken before the
+ * core's, never after it. */
+
+enum
+{
+	kWakeIndexBits = 8,
+	kWakeLimit = 1 << kWakeIndexBits,
+};
+
+struct Wake
+{
+	/* 0 while the entry is free. The entry's index is in the low bits and
+	 * the count of the wakes it has been in the rest, so that the number of
+	 * a wake that was destroyed names no later one. */
+	MCAsyncWakeId id;
+	uint32_t uses;
+	void *context;
+	/* Signalled, with its event not yet given */
+	bool signalled;
+};
+
+Wake s_wakes[kWakeLimit];
+std::atomic<Lock *> s_wake_lock(nullptr);
+/* Behind the wake lock: the core whose main thread the signals wake, and
+ * how many wakes are signalled */
+Core *s_wake_core = nullptr;
+unsigned int s_wakes_signalled = 0;
+
+/* With the wake lock held */
+Wake *
+WakeFind(MCAsyncWakeId p_id)
+{
+	if (p_id == 0)
+		return nullptr;
+	Wake *t_wake = &s_wakes[p_id & (kWakeLimit - 1)];
+	return t_wake->id == p_id ? t_wake : nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3261,14 +3373,35 @@ MCAsyncCoreInitialize(MCAsyncWakeCallback p_wake, void *p_context,
 	for (unsigned int i = 0; i < kMCAsyncTableSize; i++)
 		t_core->table[i] = nullptr;
 	t_core->last_id = 0;
-	t_core->queue_first = nullptr;
-	t_core->queue_last = nullptr;
-	t_core->file_threads = 0;
-	t_core->file_threads_waiting = 0;
-	t_core->file_thread_limit = s_file_thread_limit;
+	for (unsigned int i = 0; i < kPoolCount; i++)
+	{
+		t_core->pools[i].queue_first = nullptr;
+		t_core->pools[i].queue_last = nullptr;
+		t_core->pools[i].threads = 0;
+		t_core->pools[i].queue_length = 0;
+		t_core->pools[i].threads_busy = 0;
+		t_core->pools[i].thread_limit = s_thread_limits[i];
+	}
 	t_core->threads = 0;
 	t_core->events_first = nullptr;
 	t_core->events_last = nullptr;
+
+	/* The lock of the wakes, made once and kept for good: a thread may
+	 * signal a wake long after this core has gone */
+	Lock *t_wake_lock = s_wake_lock.load();
+	if (t_wake_lock == nullptr)
+	{
+		t_wake_lock = new (std::nothrow) Lock;
+		if (t_wake_lock == nullptr)
+		{
+			delete t_core;
+			return false;
+		}
+		s_wake_lock.store(t_wake_lock);
+	}
+	t_wake_lock->Enter();
+	s_wake_core = t_core;
+	t_wake_lock->Leave();
 
 	s_core = t_core;
 	return true;
@@ -3326,6 +3459,23 @@ MCAsyncCoreFinalize(unsigned int p_wait_ms)
 		return true;
 	s_core = nullptr;
 
+	/* The wakes first: once the lock is let go, no thread that signals one
+	 * is in this core, or will be */
+	Lock *t_wake_lock = s_wake_lock.load();
+	if (t_wake_lock != nullptr)
+	{
+		t_wake_lock->Enter();
+		s_wake_core = nullptr;
+		s_wakes_signalled = 0;
+		for (unsigned int i = 0; i < kWakeLimit; i++)
+		{
+			s_wakes[i].id = 0;
+			s_wakes[i].context = nullptr;
+			s_wakes[i].signalled = false;
+		}
+		t_wake_lock->Leave();
+	}
+
 	t_core->lock.Enter();
 
 	t_core->shutdown = true;
@@ -3333,11 +3483,14 @@ MCAsyncCoreFinalize(unsigned int p_wait_ms)
 
 	/* The jobs that never got a thread */
 	Job *t_dropped = nullptr;
-	for (Job *t_job = QueuePop(t_core); t_job != nullptr;
-	     t_job = QueuePop(t_core))
+	for (unsigned int i = 0; i < kPoolCount; i++)
 	{
-		t_job->queue_next = t_dropped;
-		t_dropped = t_job;
+		for (Job *t_job = QueuePop(&t_core->pools[i]); t_job != nullptr;
+		     t_job = QueuePop(&t_core->pools[i]))
+		{
+			t_job->queue_next = t_dropped;
+			t_dropped = t_job;
+		}
 	}
 
 	/* Every job that runs is told to stop, and every process is killed
@@ -3359,7 +3512,8 @@ MCAsyncCoreFinalize(unsigned int p_wait_ms)
 		}
 	}
 
-	t_core->work.Broadcast();
+	for (unsigned int i = 0; i < kPoolCount; i++)
+		t_core->pools[i].work.Broadcast();
 
 	uint64_t t_until = NowMs() + p_wait_ms;
 	while (t_core->threads > 0)
@@ -3419,11 +3573,13 @@ MCAsyncCoreFinalize(unsigned int p_wait_ms)
 void
 MCAsyncCoreSetThreadLimit(unsigned int p_limit)
 {
-	s_file_thread_limit = p_limit;
+	for (unsigned int i = 0; i < kPoolCount; i++)
+		s_thread_limits[i] = p_limit;
 	if (s_core != nullptr)
 	{
 		s_core->lock.Enter();
-		s_core->file_thread_limit = p_limit;
+		for (unsigned int i = 0; i < kPoolCount; i++)
+			s_core->pools[i].thread_limit = p_limit;
 		s_core->lock.Leave();
 	}
 }
@@ -3443,7 +3599,7 @@ MCAsyncCoreReadFile(const char *p_path, void *p_context)
 		JobRelease(t_job);
 		return 0;
 	}
-	return FileJobStart(t_job);
+	return QueuedJobStart(t_job, kPoolFiles);
 }
 
 MCAsyncJobId
@@ -3466,7 +3622,7 @@ MCAsyncCoreWriteFile(const char *p_path, const void *p_bytes, size_t p_length,
 	t_job->bytes = p_bytes;
 	t_job->length = p_length;
 	t_job->append = p_append;
-	return FileJobStart(t_job);
+	return QueuedJobStart(t_job, kPoolFiles);
 }
 
 MCAsyncJobId
@@ -3485,7 +3641,7 @@ MCAsyncCoreCopyFile(const char *p_from, const char *p_to, void *p_context)
 		JobRelease(t_job);
 		return 0;
 	}
-	return FileJobStart(t_job);
+	return QueuedJobStart(t_job, kPoolFiles);
 }
 
 MCAsyncJobId
@@ -3504,7 +3660,96 @@ MCAsyncCoreListFolder(const char *p_path, bool p_recursive, void *p_context)
 		return 0;
 	}
 	t_job->recursive = p_recursive;
-	return FileJobStart(t_job);
+	return QueuedJobStart(t_job, kPoolFiles);
+}
+
+MCAsyncJobId
+MCAsyncCoreCall(MCAsyncNativeFunction p_function, void *p_function_context,
+                void *p_context)
+{
+	if (s_core == nullptr || p_function == nullptr)
+		return 0;
+
+	Job *t_job = JobCreate(kJobCall, p_context);
+	if (t_job == nullptr)
+		return 0;
+	t_job->function = p_function;
+	t_job->function_context = p_function_context;
+	return QueuedJobStart(t_job, kPoolCalls);
+}
+
+MCAsyncWakeId
+MCAsyncCoreWakeCreate(void *p_context)
+{
+	Lock *t_lock = s_wake_lock.load();
+	if (s_core == nullptr || t_lock == nullptr)
+		return 0;
+
+	MCAsyncWakeId t_id = 0;
+	t_lock->Enter();
+	for (unsigned int i = 0; i < kWakeLimit && t_id == 0; i++)
+	{
+		Wake *t_wake = &s_wakes[i];
+		if (t_wake->id != 0)
+			continue;
+
+		/* Never 0, so that no wake's number is */
+		t_wake->uses = (t_wake->uses + 1) &
+				((1u << (32 - kWakeIndexBits)) - 1);
+		if (t_wake->uses == 0)
+			t_wake->uses = 1;
+		t_wake->id = (t_wake->uses << kWakeIndexBits) | i;
+		t_wake->context = p_context;
+		t_wake->signalled = false;
+		t_id = t_wake->id;
+	}
+	t_lock->Leave();
+	return t_id;
+}
+
+bool
+MCAsyncCoreWakeDestroy(MCAsyncWakeId p_wake)
+{
+	Lock *t_lock = s_wake_lock.load();
+	if (t_lock == nullptr)
+		return false;
+
+	t_lock->Enter();
+	Wake *t_wake = WakeFind(p_wake);
+	if (t_wake != nullptr)
+	{
+		if (t_wake->signalled)
+			s_wakes_signalled -= 1;
+		t_wake->id = 0;
+		t_wake->context = nullptr;
+		t_wake->signalled = false;
+	}
+	t_lock->Leave();
+	return t_wake != nullptr;
+}
+
+void
+MCAsyncCoreWakeSignal(MCAsyncWakeId p_wake)
+{
+	Lock *t_lock = s_wake_lock.load();
+	if (t_lock == nullptr)
+		return;
+
+	t_lock->Enter();
+	Wake *t_wake = WakeFind(p_wake);
+	if (t_wake != nullptr && !t_wake->signalled && s_wake_core != nullptr)
+	{
+		t_wake->signalled = true;
+		s_wakes_signalled += 1;
+
+		/* The core is there for as long as the wake lock is held:
+		 * MCAsyncCoreFinalize takes it before anything else */
+		Core *t_core = s_wake_core;
+		t_core->lock.Enter();
+		CoreWake(t_core);
+		t_core->lock.Leave();
+	}
+	t_lock->Leave();
 }
 
 MCAsyncJobId
@@ -3809,5 +4054,51 @@ MCAsyncCoreDrain(MCAsyncEventCallback p_callback, void *p_context)
 			}
 			return;
 		}
+	}
+
+	/* The wakes that were signalled: one event each, however many times */
+	Lock *t_wake_lock = s_wake_lock.load();
+	if (t_wake_lock == nullptr)
+		return;
+
+	MCAsyncWakeId t_signalled[kWakeLimit];
+	unsigned int t_count = 0;
+	t_wake_lock->Enter();
+	if (s_wakes_signalled != 0)
+	{
+		for (unsigned int i = 0; i < kWakeLimit; i++)
+		{
+			if (s_wakes[i].id != 0 && s_wakes[i].signalled)
+			{
+				s_wakes[i].signalled = false;
+				t_signalled[t_count++] = s_wakes[i].id;
+			}
+		}
+		s_wakes_signalled = 0;
+	}
+	t_wake_lock->Leave();
+
+	for (unsigned int i = 0; i < t_count; i++)
+	{
+		/* The callback for an earlier event may have destroyed this wake,
+		 * or finalized the core, which destroys them all */
+		t_wake_lock->Enter();
+		Wake *t_wake = WakeFind(t_signalled[i]);
+		void *t_context = t_wake != nullptr ? t_wake->context : nullptr;
+		t_wake_lock->Leave();
+		if (t_wake == nullptr)
+			continue;
+
+		MCAsyncEvent t_event;
+		t_event.job = t_signalled[i];
+		t_event.context = t_context;
+		t_event.kind = kMCAsyncEventWake;
+		t_event.stream = 0;
+		t_event.data = nullptr;
+		t_event.length = 0;
+		t_event.error = kMCAsyncErrorNone;
+		t_event.code = 0;
+		if (p_callback != nullptr)
+			p_callback(p_context, t_event);
 	}
 }

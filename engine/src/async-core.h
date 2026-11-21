@@ -30,8 +30,9 @@ along with OXT-Beyond.  If not see <http://www.gnu.org/licenses/>.  */
  * tools/ci/async_core_check.py: keep it free of the engine's headers.
  *
  * Threads: every function here is for the main thread (the one that called
- * MCAsyncCoreInitialize), bar none. The wake callback is the only thing
- * called on another thread.
+ * MCAsyncCoreInitialize), bar one: MCAsyncCoreWakeSignal is for any thread,
+ * at any time. The wake callback is the only thing called on another
+ * thread, and a native function given to MCAsyncCoreCall is run on one.
  *
  * Strings: paths and command lines are bytes as the system's calls take
  * them, but on Windows, where they are UTF-8 and are converted here. */
@@ -76,6 +77,10 @@ enum MCAsyncEventKind
 	/* The job is over. Every job that was started gives exactly one, and it
 	 * is the job's last event. */
 	kMCAsyncEventDone,
+	/* A wake (MCAsyncCoreWakeCreate) was signalled, once or many times,
+	 * since its last event. 'job' is the wake's number and 'context' what
+	 * the wake was made with. */
+	kMCAsyncEventWake,
 };
 
 struct MCAsyncEvent
@@ -205,6 +210,18 @@ bool MCAsyncCoreProcessWrite(MCAsyncJobId p_job, const void *p_bytes,
 /* Close the process's input once what is queued has been written */
 bool MCAsyncCoreProcessCloseInput(MCAsyncJobId p_job);
 
+/* A function of native code, with what it is called with */
+typedef void (*MCAsyncNativeFunction)(void *context);
+
+/* Call a function on another thread: Done comes when it has returned. The
+ * function must touch nothing of the engine, and what p_function_context
+ * points to must stay until Done. The calls have threads of their own (8),
+ * so that a long one holds up no file job; a call that waits for one of
+ * them and is cancelled is never made (Done says kMCAsyncErrorCancelled),
+ * and one that is being made is not interrupted. */
+MCAsyncJobId MCAsyncCoreCall(MCAsyncNativeFunction p_function,
+                             void *p_function_context, void *p_context);
+
 /* Ask a job to stop. It still ends with a Done event, whose error is
  * kMCAsyncErrorCancelled unless the job was over already. A process is
  * killed, with the processes it started. False if there is no such job. */
@@ -232,11 +249,39 @@ bool MCAsyncCoreProgress(MCAsyncJobId p_job, uint64_t& r_done,
 /* Call p_callback for every event queued, in order */
 void MCAsyncCoreDrain(MCAsyncEventCallback p_callback, void *p_context);
 
-/* How many threads the file jobs may use: 4, and 0 in a browser, where no
- * thread can be made. With 0, or when the system refuses the first thread,
- * a file job runs inside the call that starts it: its events are queued,
- * and the wake is called on the main thread, before that call returns.
- * Tests set it. Takes effect for threads not yet started. */
+/* How many threads the file jobs may use, and the native calls: 4 and 8,
+ * and 0 in a browser, where no thread can be made. This sets both. With 0,
+ * or when the system refuses the first thread, such a job runs inside the
+ * call that starts it: its events are queued, and the wake is called on
+ * the main thread, before that call returns. Tests set it. Takes effect
+ * for threads not yet started. */
 void MCAsyncCoreSetThreadLimit(unsigned int p_limit);
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  WAKES
+//
+// A wake is how a thread that is not the engine's (a native library's own)
+// tells the main thread that it has something for it, without touching the
+// engine: it signals the wake, and the next drain gives one Wake event,
+// however many signals there were since the last.
+
+/* A wake's number. 0 is never a wake. A number names its wake only: one
+ * kept after the wake was destroyed, or after the core was finalized, names
+ * nothing, and signalling it does nothing. */
+typedef uint32_t MCAsyncWakeId;
+
+/* Make a wake. 0 if the core is not initialized or there are too many
+ * (256). */
+MCAsyncWakeId MCAsyncCoreWakeCreate(void *p_context);
+
+/* Destroy a wake: no event of it comes after this. False if there is no
+ * such wake. MCAsyncCoreFinalize destroys them all. */
+bool MCAsyncCoreWakeDestroy(MCAsyncWakeId p_wake);
+
+/* Signal a wake. ON ANY THREAD, AT ANY TIME: before the core is
+ * initialized, after it is finalized, with a number that names no wake. It
+ * takes a lock for a moment, allocates nothing and waits for nothing. */
+void MCAsyncCoreWakeSignal(MCAsyncWakeId p_wake);
 
 #endif
