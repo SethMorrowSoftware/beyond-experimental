@@ -69,8 +69,8 @@ message comes each time the program writes something, and
 <asyncCancel> stops a job, <asyncStatus> and <asyncProgress> say how far
 one has got, and <asyncJobs> lists those that are running.
 
-The engine's own <shell>, <open process>, <URL> and file commands are
-unchanged: they do their work before the script goes on, as they always
+The engine's own <shell>, <open process>, <URL> and file commands are as
+they were: they do their work before the script goes on, as they always
 have. Where a script has its own handler with the name of one of this
 library's, that handler is called, as before.
 
