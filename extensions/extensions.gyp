@@ -162,6 +162,7 @@
 				'libraries/timezone/timezone.lcb',
 				'libraries/macstatusmenu/macstatusmenu.lcb',
 				'libraries/hxtcompat/hxtcompat.lcb',
+				'libraries/async/async.lcb',
 				'libraries/androiddocuments/androiddocuments.lcb',
 
 				'widgets/androidbutton/androidbutton.lcb',

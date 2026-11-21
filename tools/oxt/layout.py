@@ -196,6 +196,7 @@ REPO_BUILT_EXTENSIONS = (
     'com.livecode.widget.tile',
     'com.livecode.widget.treeview',
     'org.openxtalk.library.androiddocuments',
+    'org.openxtalk.library.async',
     'org.openxtalk.library.hxtcompat',
 )
 
