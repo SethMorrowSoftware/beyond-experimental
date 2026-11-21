@@ -501,6 +501,9 @@ component Extensions
 	// OXT-Beyond: jsonDecode and jsonEncode, JSON arrays and objects kept apart
 	into [[ToolsFolder]]/Extensions place
 		rfolder macosx:packaged_extensions/com.livecode.library.jsoncodec
+	// OXT-Beyond: workers, for long handlers run beside the stack
+	into [[ToolsFolder]]/Extensions place
+		rfolder macosx:packaged_extensions/com.livecode.library.worker
 
 	include TimeZone
 

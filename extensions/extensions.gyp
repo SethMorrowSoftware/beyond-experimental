@@ -92,6 +92,9 @@
 				# OXT-Beyond: jsonDecode and jsonEncode, with JSON arrays and
 				# objects kept apart through a shape.
 				'script-libraries/jsoncodec/jsoncodec.livecodescript',
+				# OXT-Beyond: workers, the engine started again without a
+				# window to run a script's long handlers beside the stack.
+				'script-libraries/worker/worker.livecodescript',
 			],
 			
 			'dependencies':

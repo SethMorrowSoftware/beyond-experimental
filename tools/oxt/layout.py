@@ -174,6 +174,7 @@ REPO_BUILT_EXTENSIONS = (
     'com.livecode.library.timezone',
     'com.livecode.library.toast',
     'com.livecode.library.widgetutils',
+    'com.livecode.library.worker',
     'com.livecode.widget.browser',
     'com.livecode.widget.clock',
     'com.livecode.widget.colorswatch',
