@@ -314,6 +314,9 @@ void MCImage::close()
 	
 	// IM-2014-06-26: [[ Bug 12702 ]] Make sure editing is finished when closing.
 	recompress();
+	// OXT-Beyond: and pixels held uncompressed are compressed, as the paint
+	//   tools' are, so an image off screen keeps only its compressed data.
+	ensurecompressed();
 	
 	if (opened == 1 && m_image_opened)
 		closeimage();
@@ -1162,6 +1165,9 @@ IO_stat MCImage::save(IO_handle stream, uint4 p_part, bool p_force_ext, uint32_t
 	IO_stat stat;
 
 	recompress();
+	// OXT-Beyond: pixels held uncompressed are saved compressed, as ever.
+	if (!ensurecompressed())
+		return IO_ERROR;
 	if ((stat = IO_write_uint1(OT_IMAGE, stream)) != IO_NORMAL)
 		return stat;
 	
@@ -1581,6 +1587,9 @@ bool MCImage::getclipboardtext(MCDataRef& r_data)
 	bool t_success = true;
 	
 	recompress();
+	// OXT-Beyond: the clipboard has the data the image would save.
+	if (!ensurecompressed())
+		return false;
 	if (getcompression() == F_RLE)
 	{
 		MCImageBitmap *t_bitmap = nil;
@@ -1856,14 +1865,23 @@ bool MCImage::setbitmap(MCImageBitmap *p_bitmap, MCGFloat p_scale, bool p_update
 {
 	bool t_success = true;
 
-	MCImageCompressedBitmap *t_compressed = nil;
+	// OXT-Beyond: while the paintCompression is "none" the new pixels are
+	//   held as they are, and compressed only when their data is needed
+	//   (ensurecompressed), so a script that sets the imageData many times a
+	//   second no longer compresses every frame, nor decompresses it to draw.
+	if (MCpaintcompression == EX_RAW)
+		t_success = setuncompressedbitmap(p_bitmap);
+	else
+	{
+		MCImageCompressedBitmap *t_compressed = nil;
 
-	t_success = MCImageCompress(p_bitmap, (flags & F_DONT_DITHER) == 0, t_compressed);
+		t_success = MCImageCompress(p_bitmap, (flags & F_DONT_DITHER) == 0, t_compressed);
 
-	if (t_success)
-		t_success = setcompressedbitmap(t_compressed);
+		if (t_success)
+			t_success = setcompressedbitmap(t_compressed);
 
-	MCImageFreeCompressedBitmap(t_compressed);
+		MCImageFreeCompressedBitmap(t_compressed);
+	}
 
 	if (t_success)
 	{
@@ -1929,6 +1947,46 @@ bool MCImage::setcompressedbitmap(MCImageCompressedBitmap *p_compressed)
 		// MW-2013-09-05: [[ UnicodifyImage ]] Clear the filename property.
 		MCValueAssign(filename, kMCEmptyString);
 	}
+
+	return t_success;
+}
+
+// OXT-Beyond: as setcompressedbitmap, with the pixels kept uncompressed. The
+//   compression flags are cleared and stay so: the flags say how the data
+//   is saved, and these pixels are compressed (ensurecompressed) before
+//   anything saves them or reads their data.
+bool MCImage::setuncompressedbitmap(MCImageBitmap *p_bitmap)
+{
+	MCImageRep *t_rep = nil;
+	if (!MCImageRepCreateUncompressed(p_bitmap, t_rep))
+		return false;
+
+	setrep(t_rep);
+	t_rep->Release();
+	flags &= ~(F_HAS_FILENAME | F_COMPRESSION | F_TRUE_COLOR | F_NEED_FIXING);
+
+	MCValueAssign(filename, kMCEmptyString);
+
+	return true;
+}
+
+bool MCImage::ensurecompressed()
+{
+	if (m_rep == nil || m_rep->GetType() != kMCImageRepUncompressed)
+		return true;
+
+	// The bitmap belongs to the rep, which setcompressedbitmap lets go of, so
+	// it is not touched after that. Nothing about the image changes but how
+	// it holds its pixels: no angle, size or filename, and nothing to redraw.
+	MCImageBitmap *t_bitmap = static_cast<MCUncompressedImageRep*>(m_rep)->GetBitmap();
+
+	MCImageCompressedBitmap *t_compressed = nil;
+	bool t_success = MCImageCompress(t_bitmap, (flags & F_DONT_DITHER) == 0, t_compressed);
+
+	if (t_success)
+		t_success = setcompressedbitmap(t_compressed);
+
+	MCImageFreeCompressedBitmap(t_compressed);
 
 	return t_success;
 }

@@ -4,7 +4,7 @@ Type: property
 
 Syntax: get the paintCompression of <image>
 
-Syntax: set the paintCompression to {png | jpeg | gif | rle}
+Syntax: set the paintCompression to {png | jpeg | gif | rle | none}
 
 Summary:
 Specifies the <compress|compression> <format> used for storing an
@@ -22,6 +22,14 @@ set the paintCompression to "PNG"
 Example:
 if the paintCompression of image "Photo" is "pict" then warnUser
 
+Example:
+-- a picture drawn many times a second, compressed only when saved
+set the paintCompression to "none"
+repeat with tFrame = 1 to 600
+   set the imageData of image "Canvas" to nextFrame(tFrame)
+   wait 0 milliseconds with messages
+end repeat
+
 The result:
 >*Cross-platform note:*  On <Mac OS> and <OS X|OS X systems>, <PICT>
 > <files> can be <import|imported>, and the <paintCompression> of the
@@ -38,6 +46,8 @@ A string describing the compression format.
 -   gif: 
 -   rle: 
 -   pict: 
+-   none: changed images keep their pixels uncompressed until their data
+    is needed (the global paintCompression only)
 
 
 Description:
@@ -58,6 +68,24 @@ If an image's alphaData <property> contains any value other than 255
 (opaque), it is automatically recompressed in PNG format to preserve the
 <alpha channel> data.
 
+**none:** while the global <paintCompression> is none, an <image> whose
+pixels change (when a script sets its <imageData>, <alphaData> or
+<maskData>, or crops it, for instance) keeps them uncompressed instead of
+compressing them at once, and is drawn from them as they are. A script
+that sets the <imageData> of an <image> many times a second then spends
+almost no time on each: for a 640 x 480 <image> with transparency, each
+took about 34 milliseconds with rle (which keeps such an image as PNG) and
+about 1 with none. The pixels are compressed, in the global
+<paintCompression> in force then (as rle does, if that is still none),
+when their data is needed: when the <stack> is saved, when the <image>
+closes (as its <card> closes), when it is copied to the clipboard, and
+when its <text>, <size> or <paintCompression> is read. So the
+<paintCompression> of an <image> is never none, and its <text> is the
+data rle would have given it. Until then, a pixel that the <maskData>
+hides keeps the color it was set to, which rle does not keep under its
+mask (once compressed, such a pixel's <imageData> is four zeroes). An
+<image> holding its pixels uncompressed takes 4 bytes of memory a pixel.
+
 By <default>, the <global> <paintCompression> <property> is set to "rle"
 in standalones and "png" in the development environment.The
 <paintCompression> of an <image> is one of the following: "png", "jpeg",
@@ -69,13 +97,18 @@ the <format> of the <import|imported> picture <file>.For images, this
 property is read-only and cannot be set; you can set only the global
 <paintCompression> 
 
+Changes:
+The value none was added in version 9.7.1 (OXT-Beyond).
+
 References: create (command), import (command), global (command),
 choose (command), format (function), files (function),
 property (glossary), compress (glossary), PICT (glossary),
 OS X (glossary), Windows (glossary), import (glossary), Mac OS (glossary),
 Unix (glossary), alpha channel (glossary), command (glossary),
 paint tool (glossary), default (keyword), file (keyword), image (keyword),
-card (keyword), stack (object), image (object), JPEGQuality (property)
+card (keyword), stack (object), image (object), JPEGQuality (property),
+imageData (property), alphaData (property), maskData (property),
+text (property), size (property), crop (command)
 
 Tags: multimedia
 

@@ -221,6 +221,9 @@ void MCImage::GetSize(MCExecContext& ctxt, uinteger_t& r_size)
 	uinteger_t t_size = 0;
 	MCImageCompressedBitmap *t_compressed = nil;
 	
+	// OXT-Beyond: the size of the data the image would save.
+	ensurecompressed();
+	
 	if (m_rep != nil)
 	{
 		if (m_rep->GetType() == kMCImageRepResident)
@@ -485,6 +488,8 @@ void MCImage::GetText(MCExecContext& ctxt, MCDataRef& r_text)
     {
         t_image_to_work_on->recompress();
     }
+    // OXT-Beyond: pixels held uncompressed give the data they would save.
+    t_image_to_work_on->ensurecompressed();
     
     void *t_data = nil;
 	uindex_t t_size = 0;
@@ -887,6 +892,11 @@ void MCImage::SetResizeQuality(MCExecContext& ctxt, intenum_t p_quality)
 
 void MCImage::GetPaintCompression(MCExecContext& ctxt, intenum_t& r_compression)
 {
+	// OXT-Beyond: pixels held uncompressed (the paintCompression "none") are
+	//   compressed first, so this is the format the image's text and saved
+	//   data are in, as it always was; the mime library reads it so.
+	ensurecompressed();
+	
 	uint4 pc;
 	pc = getcompression();
 	r_compression = (intenum_t)pc;

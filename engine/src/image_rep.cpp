@@ -14,6 +14,10 @@ for more details.
 You should have received a copy of the GNU General Public License
 along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 
+/* Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
+   (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
+   Seth Morrow (2026); its Git history and CHANGELOG.md say what changed. */
+
 #include "prefix.h"
 
 #include "globdefs.h"
@@ -718,6 +722,93 @@ bool MCPixelDataImageRep::LoadHeader(uint32_t &r_width, uint32_t &r_height, uint
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// OXT-Beyond: pixels an image holds uncompressed (the paintCompression "none").
+
+MCUncompressedImageRep::MCUncompressedImageRep(MCImageBitmap *p_bitmap)
+{
+	m_bitmap = p_bitmap;
+}
+
+MCUncompressedImageRep::~MCUncompressedImageRep()
+{
+	// The loadable rep's destructor frees its frames; the pixels are ours.
+	MCImageFreeBitmap(m_bitmap);
+	m_bitmap = nil;
+}
+
+uint32_t MCUncompressedImageRep::GetDataCompression()
+{
+	return F_RLE;
+}
+
+uindex_t MCUncompressedImageRep::GetFrameCount()
+{
+	return 1;
+}
+
+// The bitmap is already unpremultiplied and exact, so it is lent as it is,
+// as MCGImageImageRep lends its own; the loadable rep would make a copy of
+// a copy. A caller reads a locked bitmap and never changes it.
+bool MCUncompressedImageRep::LockBitmap(uindex_t p_index, MCGFloat p_density, MCImageBitmap *&r_bitmap)
+{
+	if (p_index > 0 || m_bitmap == nil)
+		return false;
+
+	Retain();
+
+	r_bitmap = m_bitmap;
+
+	return true;
+}
+
+void MCUncompressedImageRep::UnlockBitmap(uindex_t p_index, MCImageBitmap *p_bitmap)
+{
+	if (p_index > 0 || p_bitmap == nil || p_bitmap != m_bitmap)
+		return;
+
+	Release();
+}
+
+// The frame drawing uses: a copy, which the loadable rep premultiplies into
+// an MCGImage and keeps in the image cache, and can let go of and make again.
+bool MCUncompressedImageRep::LoadImageFrames(MCBitmapFrame *&r_frames, uindex_t &r_frame_count, bool &r_premultiplied)
+{
+	bool t_success = m_bitmap != nil;
+
+	MCBitmapFrame *t_frame = nil;
+	if (t_success)
+		t_success = MCMemoryNewArray(1, t_frame);
+	if (t_success)
+		t_success = MCImageCopyBitmap(m_bitmap, t_frame->image);
+
+	if (t_success)
+	{
+		t_frame->x_scale = t_frame->y_scale = 1.0;
+
+		r_frames = t_frame;
+		r_frame_count = 1;
+		r_premultiplied = false;
+	}
+	else
+		MCImageFreeFrames(t_frame, 1);
+
+	return t_success;
+}
+
+bool MCUncompressedImageRep::LoadHeader(uindex_t &r_width, uindex_t &r_height, uint32_t &r_frame_count)
+{
+	if (m_bitmap == nil)
+		return false;
+
+	r_width = m_bitmap->width;
+	r_height = m_bitmap->height;
+	r_frame_count = 1;
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 bool MCImageRepCreateReferencedWithSearchKey(MCStringRef p_filename, MCStringRef p_searchkey, MCImageRep *&r_rep)
 {
 	bool t_success;
@@ -837,6 +928,26 @@ bool MCImageRepGetPixelRep(MCDataRef p_pixel_data, uint32_t p_width, uint32_t p_
 	}
 	
 	return t_success;
+}
+
+// OXT-Beyond: the image keeps its own copy; the caller still owns p_bitmap.
+bool MCImageRepCreateUncompressed(MCImageBitmap *p_bitmap, MCImageRep *&r_rep)
+{
+	MCImageBitmap *t_copy = nil;
+	if (!MCImageCopyBitmap(p_bitmap, t_copy))
+		return false;
+
+	MCUncompressedImageRep *t_rep = new (nothrow) MCUncompressedImageRep(t_copy);
+	if (t_rep == nil)
+	{
+		MCImageFreeBitmap(t_copy);
+		return false;
+	}
+
+	MCCachedImageRep::AddRep(t_rep);
+	r_rep = t_rep->Retain();
+
+	return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

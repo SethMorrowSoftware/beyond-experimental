@@ -399,6 +399,13 @@ public:
 	// IM-2013-07-19: [[ ResIndependence ]] add scale param for hi-res images
 	bool setbitmap(MCImageBitmap *p_bitmap, MCGFloat p_scale, bool p_update_geometry = false);
 
+	// OXT-Beyond: pixels held uncompressed while the paintCompression is
+	//   "none" (setbitmap) are compressed now, with the paintCompression
+	//   in force (as "rle" does when that is still "none"), because their
+	//   data is about to be saved, read or copied. Anything else is left as
+	//   it is: the paint tools' pixels are recompress()'s.
+	bool ensurecompressed();
+
 	// MW-2013-09-05: [[ Bug 11127 ]] These are used when saving / loading an image
 	//   they hold the control's colors, as the ones serialized in MCObject are the
 	//   image colors (for <= 8 color RLE images).
@@ -417,6 +424,8 @@ private:
 	void setrep(MCImageRep *p_rep);
 	
 	bool setcompressedbitmap(MCImageCompressedBitmap *p_compressed);
+	// OXT-Beyond: holds a copy of the pixels uncompressed (MCUncompressedImageRep).
+	bool setuncompressedbitmap(MCImageBitmap *p_bitmap);
 	bool setfilename(MCStringRef p_filename);
 	bool setdata(void *p_data, uindex_t p_size);
 	

@@ -386,6 +386,8 @@ void MCMiscExecExportImageToAlbum(MCExecContext& ctxt, MCStringRef p_data_or_id,
 		
 		MCImage *t_image;
 		t_image = static_cast<MCImage *>(objptr);
+		// OXT-Beyond: pixels held uncompressed are exported as they would save.
+		t_image -> ensurecompressed();
 		if (t_image -> getcompression() == F_PNG)
         {
             /* UNCHECKED */ MCStringCreateWithCString(".png\n", &t_file_extension);
