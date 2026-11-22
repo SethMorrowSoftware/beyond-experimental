@@ -83,6 +83,9 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 $ProductName = 'OXT-Beyond'
+# beyond-experimental's Start menu folder and desktop shortcut (InstallName in
+# oxt-beyond.iss), kept apart from a released OXT-Beyond's
+$InstallName = 'OXT-Beyond Experimental'
 $ExeName = 'OXT-Beyond.exe'
 $Publisher = 'OXT-Beyond contributors'
 $RepoUrl = 'https://github.com/SethMorrowSoftware/OpenXTalk-Beyond'
@@ -238,10 +241,10 @@ foreach ($pair in @(@('.oxtstack', 'OXTBeyond.Stack'), @('.oxtscript', 'OXTBeyon
 }
 $programsDir = [Environment]::GetFolderPath('Programs')
 $desktopDir = [Environment]::GetFolderPath('DesktopDirectory')
-$groupDir = Join-Path $programsDir $ProductName
+$groupDir = Join-Path $programsDir $InstallName
 $appLink = Join-Path $groupDir "$ProductName.lnk"
 $uninstallLink = Join-Path $groupDir "Uninstall $ProductName.lnk"
-$desktopLink = Join-Path $desktopDir "$ProductName.lnk"
+$desktopLink = Join-Path $desktopDir "$InstallName.lnk"
 $testDesktopLink = -not (Test-Path -LiteralPath $desktopLink)
 if (-not $testDesktopLink) {
     Write-Warning "$desktopLink exists already; the desktop shortcut task is left out of the test."
@@ -251,7 +254,8 @@ if (Test-Path -LiteralPath $groupDir) {
 }
 $taskList = @()
 $taskList += $(if ($testDesktopLink) { 'desktopicon' } else { '!desktopicon' })
-if (-not $testAssociations) { $taskList += '!fileassoc' }
+# fileassoc is unticked by default in beyond-experimental, so ask for it
+$taskList += $(if ($testAssociations) { 'fileassoc' } else { '!fileassoc' })
 $tasks = $taskList -join ','
 
 $installed = $false
