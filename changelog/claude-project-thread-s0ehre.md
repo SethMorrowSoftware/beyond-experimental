@@ -1,1 +1,1 @@
-- CI: before beyond-experimental's first release, the Android engine workflow's emulator jobs build their test apps with the IDE of OXT-Beyond's latest release, so the engine built here can be tested and carried in the runtimes asset (#6)
+- CI: before beyond-experimental's first release, the Android engine workflow's emulator jobs build their test apps with the IDE of OXT-Beyond's latest release, so the engine built here can be tested and carried in the runtimes asset (#6, #7)
