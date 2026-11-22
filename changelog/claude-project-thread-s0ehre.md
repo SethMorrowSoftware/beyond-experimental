@@ -1,1 +1,1 @@
-- CI: before beyond-experimental's first release, the Android engine workflow's emulator jobs build their test apps with the IDE of OXT-Beyond's latest release, so the engine built here can be tested and carried in the runtimes asset (#6, #7)
+- Runtimes asset: oxt-runtimes-0.2.8-experimental.1-r2, built from this repository's engine at dc99f509, with OXT-Beyond's own Android engine (#8)
