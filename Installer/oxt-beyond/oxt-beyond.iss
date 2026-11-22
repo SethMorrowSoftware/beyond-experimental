@@ -31,6 +31,10 @@
 
 #define AppName "OXT-Beyond"
 #define AppExeName "OXT-Beyond.exe"
+; beyond-experimental: installs beside a released OXT-Beyond, never over it:
+; its own AppId, Program Files folder, Start menu folder and desktop shortcut,
+; and no file association unless the user ticks it.
+#define InstallName "OXT-Beyond Experimental"
 #define RepoUrl "https://github.com/SethMorrowSoftware/OpenXTalk-Beyond"
 
 #ifndef RepoRoot
@@ -94,10 +98,12 @@
 #endif
 
 [Setup]
-; Fixed for every release: it names the uninstall registry key
-; ({6CB5C1F5-4B20-43EF-B5F6-1C0C2C07B803}_is1) and lets a new version
-; replace an installed one. Never change it.
-AppId={{6CB5C1F5-4B20-43EF-B5F6-1C0C2C07B803}
+; Fixed for every release of beyond-experimental: it names the uninstall
+; registry key ({66B08364-846D-4DD9-B7C6-9CD95BBBBF51}_is1) and lets a new
+; experimental version replace an installed one. It differs from
+; OXT-Beyond's ({6CB5C1F5-4B20-43EF-B5F6-1C0C2C07B803}), so the two install
+; side by side. Never change it.
+AppId={{66B08364-846D-4DD9-B7C6-9CD95BBBBF51}
 AppName={#AppName}
 AppVersion={#AppVersion}
 ; "OXT-Beyond 0.0.1" in the wizard and in Settings > Apps, instead of Inno
@@ -109,8 +115,8 @@ AppPublisherURL={#RepoUrl}
 AppSupportURL={#RepoUrl}/issues
 AppUpdatesURL={#RepoUrl}/releases
 AppComments=xTalk IDE, continuing OpenXTalk Lite by Terry Little, Tom Perry and the OpenXTalk contributors, based on LiveCode Community.
-DefaultDirName={autopf}\{#AppName}
-DefaultGroupName={#AppName}
+DefaultDirName={autopf}\{#InstallName}
+DefaultGroupName={#InstallName}
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#AppExeName}
 ; The engine and all externals are 64-bit (x64). x64compatible also admits
@@ -161,7 +167,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "fileassoc"; Description: "Open .oxtstack and .oxtscript files with {#AppName}"; GroupDescription: "File associations:"
+Name: "fileassoc"; Description: "Open .oxtstack and .oxtscript files with {#AppName}"; GroupDescription: "File associations:"; Flags: unchecked
 
 [InstallDelete]
 ; When a new version is installed over an older one, remove the program
@@ -222,7 +228,7 @@ Source: "{#StageDir}\Toolset\palettes\updates\updatehistory\*.txt"; DestDir: "{a
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Comment: "Start the {#AppName} IDE"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Comment: "Start the {#AppName} IDE"; Tasks: desktopicon
+Name: "{autodesktop}\{#InstallName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Comment: "Start the {#AppName} IDE"; Tasks: desktopicon
 
 [Registry]
 ; File associations, in HKLM (install for all users) or HKCU (install for
