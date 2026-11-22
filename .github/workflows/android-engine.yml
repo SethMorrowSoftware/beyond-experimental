@@ -425,8 +425,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          UPSTREAM: SethMorrowSoftware/OpenXTalk-Beyond
         run: |
           tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          # beyond-experimental: before its first release there is no IDE
+          # of its own to take, so the builder is OXT-Beyond's latest
+          # release's (its Android builder is the same; the engine under
+          # test is still the one built here)
+          if [ -z "$tag" ] && [ "$REPO" != "$UPSTREAM" ]; then
+            REPO=$UPSTREAM
+            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          fi
           [ -n "$tag" ] || { echo "::error::no release tagged v<version> to take the IDE from"; exit 1; }
           echo "The IDE of $tag"
           echo "### The Android engine built here, in the IDE of $tag" >> "$GITHUB_STEP_SUMMARY"
@@ -681,8 +690,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          UPSTREAM: SethMorrowSoftware/OpenXTalk-Beyond
         run: |
           tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          # beyond-experimental: before its first release there is no IDE
+          # of its own to take, so the builder is OXT-Beyond's latest
+          # release's (its Android builder is the same; the engine under
+          # test is still the one built here)
+          if [ -z "$tag" ] && [ "$REPO" != "$UPSTREAM" ]; then
+            REPO=$UPSTREAM
+            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          fi
           [ -n "$tag" ] || { echo "::error::no release tagged v<version> to take the IDE from"; exit 1; }
           echo "The IDE of $tag"
           echo "### The script tests on Android, built in the IDE of $tag" >> "$GITHUB_STEP_SUMMARY"
