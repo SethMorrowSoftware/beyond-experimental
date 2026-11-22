@@ -427,14 +427,15 @@ jobs:
           REPO: ${{ github.repository }}
           UPSTREAM: SethMorrowSoftware/OpenXTalk-Beyond
         run: |
-          tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          # (|| true: with pipefail, a grep that finds no tag would end the step here)
+          tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1) || true
           # beyond-experimental: before its first release there is no IDE
           # of its own to take, so the builder is OXT-Beyond's latest
           # release's (its Android builder is the same; the engine under
           # test is still the one built here)
           if [ -z "$tag" ] && [ "$REPO" != "$UPSTREAM" ]; then
             REPO=$UPSTREAM
-            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1) || true
           fi
           [ -n "$tag" ] || { echo "::error::no release tagged v<version> to take the IDE from"; exit 1; }
           echo "The IDE of $tag"
@@ -692,14 +693,15 @@ jobs:
           REPO: ${{ github.repository }}
           UPSTREAM: SethMorrowSoftware/OpenXTalk-Beyond
         run: |
-          tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+          # (|| true: with pipefail, a grep that finds no tag would end the step here)
+          tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1) || true
           # beyond-experimental: before its first release there is no IDE
           # of its own to take, so the builder is OXT-Beyond's latest
           # release's (its Android builder is the same; the engine under
           # test is still the one built here)
           if [ -z "$tag" ] && [ "$REPO" != "$UPSTREAM" ]; then
             REPO=$UPSTREAM
-            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1)
+            tag=$(gh release list --repo "$REPO" --limit 30 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' | head -n 1) || true
           fi
           [ -n "$tag" ] || { echo "::error::no release tagged v<version> to take the IDE from"; exit 1; }
           echo "The IDE of $tag"
