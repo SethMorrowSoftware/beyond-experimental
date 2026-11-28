@@ -1744,7 +1744,9 @@ class DeviceBackAndBars(unittest.TestCase):
         # them over it: the stack is inside them
         status, out, calls = self.run_probe((self.G,) * 4, argv=('--within-bars',), then=self.INSIDE)
         self.assertEqual(status, 0, out)
-        self.assertIn('The bars: 1 more screen(s) in 0 s; the bars are drawn over the stack in the last', out)
+        # (0 s, or 1 on a slow runner: macos-15 took about half a second
+        # for the second screen on 2026-11-28 and printed "in 1 s")
+        self.assertRegex(out, r'The bars: 1 more screen\(s\) in [01] s; the bars are drawn over the stack in the last')
         self.assertIn('The bars: the stack is inside them (the first and last rows are not its green)', out)
         self.assertEqual(self.shots, ['shot', 'shot'])
 
