@@ -364,6 +364,7 @@ Boolean MCusesystemwindowcolor;
 // OXT-Beyond: the useDesktopAppearance (Linux: the systemAppearance follows
 // the desktop's light or dark setting; lnxdc.cpp)
 Boolean MCusedesktopappearance;
+bool MCcloseendedprocesses;
 Boolean MCbufferimages;
 MCStringRef MCserialcontrolsettings;
 MCStringRef MCshellcmd;
@@ -753,6 +754,7 @@ void X_clear_globals(void)
 	MChidewindows = False;
 	MCusesystemwindowcolor = False;
 	MCusedesktopappearance = False;
+	MCcloseendedprocesses = false;
 	MCbufferimages = False;
 	MCserialcontrolsettings = MCValueRetain(kMCEmptyString);
 	MCshellcmd = MCValueRetain(kMCEmptyString);
@@ -1078,6 +1080,10 @@ bool X_open(int argc, MCStringRef argv[], MCStringRef envp[])
 	////
 
 	MCU_init();
+
+	// OXT-Beyond: a Background Workers worker ends with the stack's process,
+	// however that ends, from its first moment (async.cpp)
+	MCAsyncEndWithParentIfWorker();
 	
 	////
     
@@ -1350,11 +1356,20 @@ int X_close(void)
 		delete[] MCfiles; /* Allocated with new[] */
 	if (MCprocesses != NULL)
 		delete[] MCprocesses; /* Allocated with new[] */
+	// OXT-Beyond: under the socket list's lock. Off Windows a thread polls
+	// the sockets (MCSocketsPoll) until MCSocketsFinalize, far below,
+	// stops it; deleting them here without the lock let that thread read
+	// the freed list and write into a freed socket, a heap corruption
+	// that could abort or hang an engine at quit.
+#ifdef MCSSL
+	MCSocketsDeleteAll();
+#else
 	if (MCnsockets)
 		while (MCnsockets)
 			delete MCsockets[--MCnsockets];
 	if (MCsockets != NULL)
 		delete MCsockets;
+#endif
 
 	while (MCsavegroupptr != NULL)
 	{

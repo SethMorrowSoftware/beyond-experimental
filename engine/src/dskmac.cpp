@@ -3250,6 +3250,29 @@ struct MCMacDesktop: public MCSystemInterface, public MCMacSystemService
         return True;
     }
 	
+	// OXT-Beyond: the Finder's Move to Trash and reveal (mac-core.mm; from
+	// HyperXTalk, #538 and #539). Not in the server engine, which has no
+	// Finder to ask
+	virtual bool MoveToTrash(MCStringRef p_native_path)
+	{
+#ifndef _SERVER
+		extern bool MCMacPlatformMoveToTrash(MCStringRef p_path);
+		return MCMacPlatformMoveToTrash(p_native_path);
+#else
+		return false;
+#endif
+	}
+
+	virtual bool RevealInFileManager(MCStringRef p_native_path)
+	{
+#ifndef _SERVER
+		extern bool MCMacPlatformRevealInFinder(MCStringRef p_path);
+		return MCMacPlatformRevealInFinder(p_native_path);
+#else
+		return false;
+#endif
+	}
+
 	virtual Boolean RenameFileOrFolder(MCStringRef p_old_name, MCStringRef p_new_name)
     {
         MCAutoStringRefAsUTF8String t_old_name, t_new_name;
@@ -4465,6 +4488,7 @@ struct MCMacDesktop: public MCSystemInterface, public MCMacSystemService
                 MCU_realloc((char **)&MCprocesses, MCnprocesses,
                             MCnprocesses + 1, sizeof(Streamnode));
                 MCprocesses[MCnprocesses].name = (MCNameRef)MCValueRetain(MCM_shell);
+                MCprocesses[MCnprocesses].read_to_end = false;
                 MCprocesses[MCnprocesses].mode = OM_NEITHER;
                 MCprocesses[MCnprocesses].ohandle = NULL;
                 MCprocesses[MCnprocesses].ihandle = NULL;
@@ -5853,6 +5877,7 @@ static void MCS_startprocess_launch(MCNameRef name, MCStringRef docname, Open_mo
 				MCU_realloc((char **)&MCprocesses, MCnprocesses, MCnprocesses + 1,
 				            sizeof(Streamnode));
 				MCprocesses[MCnprocesses].name = MCValueRetain(name);
+				MCprocesses[MCnprocesses].read_to_end = false;
 				MCprocesses[MCnprocesses].mode = OM_NEITHER;
 				MCprocesses[MCnprocesses].ihandle = NULL;
 				MCprocesses[MCnprocesses].ohandle = NULL;
@@ -5884,6 +5909,7 @@ static void MCS_startprocess_unix(MCNameRef name, MCStringRef doc, Open_mode mod
 	// Store process information.
 	uint2 index = MCnprocesses;
 	MCprocesses[MCnprocesses].name = (MCNameRef)MCValueRetain(name);
+	MCprocesses[MCnprocesses].read_to_end = false;
 	MCprocesses[MCnprocesses].mode = mode;
 	MCprocesses[MCnprocesses].ihandle = NULL;
 	MCprocesses[MCnprocesses].ohandle = NULL;

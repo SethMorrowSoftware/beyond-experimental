@@ -2,7 +2,7 @@
 
 These tools need only Python 3 (standard library, 3.8 or later: the Linux
 build container has 3.8) and run on Windows, Linux and macOS, except the
-IDE stack tools (`ide-stack-*`), which are LiveCode scripts run by a
+IDE stack tools (`ide-stack-*`), which are xTalk scripts run by a
 development engine without a user interface.
 
 | tool | purpose |
@@ -539,7 +539,7 @@ Intended differences from OXT Lite 1.15:
 | the 3 junk and 2 excluded files | see [Classes](#classes) |
 | `LICENSE`, `LICENSE-EXCEPTION.md`, `THIRD-PARTY-NOTICES.md` | added: OXT-Beyond's licence files |
 | `Ext/mergJSON/**` | added: mergJSON, built from its source in `mergjson/` (the external, its library and the licences of its code) |
-| `PROVENANCE-oxt-runtimes-*.md` | added: provenance of the runtimes asset (`PROVENANCE-oxt-runtimes-0.2.8-dp.2.md`, and `PROVENANCE-oxt-runtimes-1.15.md` for its Android files) |
+| `PROVENANCE-oxt-runtimes-*.md` | added: provenance of the runtimes asset (`PROVENANCE-oxt-runtimes-0.2.8-dp.3.md`, and `PROVENANCE-oxt-runtimes-1.15.md` for its Android files) |
 | `Runtime/Windows/x86-32/**`, `Runtime/Linux/**`, timezone `code/**` and `resources/**` | with a runtimes asset made from this repository's builds (any but `oxt-runtimes-1.15`), these may differ from 1.15's files, lack what 1.15's Linux runtimes bundled in `lib/` (shared libraries of other projects) and its iOS and macOS 10.9 timezone code, or have new files (the externals lists of the 64-bit Linux runtime, for example); `Runtime/Android/**`, carried over unchanged, is compared byte for byte, apart from the Java layer that such an asset's `java_layer` names (`Runtime/Android/Classes`, built from this repository) |
 | `Extensions/<xTalk folders>/**`, `Extensions/XTALK-EXTENSIONS.txt` | added: the xTalk Suite extensions (class `xtalk`); against a reference that has them they are compared like build outputs, and `--no-xtalk-extensions` makes them intended differences |
 
@@ -671,10 +671,12 @@ export`, from the cache only).
 
 `--dmg` (a macOS layout, on macOS) writes the disk image: `ditto` copies
 the (signed) app into a temporary folder next to a link to
-`/Applications`, and `hdiutil create -format UDZO -fs HFS+ -volname
+`/Applications`, and `hdiutil create -format ULMO -fs HFS+ -volname
 "OXT-Beyond <version>"` makes the image (HFS+: every macOS the app runs
 on reads it, and it is case-insensitive like the names `package.py`
-checks). A failure is retried up to four times (hdiutil sometimes fails
+checks). ULMO is LZMA, which macOS reads since 10.15 (the app needs
+11.0); it holds the same app as the zlib image (UDZO) of earlier
+releases in about a fifth less. A failure is retried up to four times (hdiutil sometimes fails
 with "Resource busy" on CI runners), and `hdiutil verify` checks the
 result. Sign the app before this step: the image and the zip hold it as
 it is.
@@ -700,7 +702,10 @@ it is.
   system that supports them (not FAT, which cannot hold the package's
   modes either). Tarballs
   are compressed by `xz -T0` when the `xz` program exists (Python's lzma
-  uses one core; `OXT_PYTHON_XZ=1` forces it), preset 6 (`--xz-preset`).
+  uses one core; `OXT_PYTHON_XZ=1` forces it), preset 9 (`--xz-preset`;
+  6 until 0.2.8-dp.2.1: preset 9 makes that release's Linux package
+  638 MB instead of 707 MB, and extracting it needs about 65 MiB of
+  memory instead of 9 MiB).
 * **The macOS zip** is `ditto`'s own on macOS. Elsewhere (or with
   `OXT_PYTHON_ZIP=1`) it is written here, with folder entries, each
   file's Unix mode and symbolic links stored as links, as `ditto` writes
@@ -776,14 +781,14 @@ xTalk Suite extensions are not assets: see
 {
   "assets": [
     {
-      "id": "oxt-runtimes-0.2.8-dp.2",
-      "url": "https://github.com/SethMorrowSoftware/OpenXTalk-Beyond/releases/download/runtimes-0.2.8-dp.2/oxt-runtimes-0.2.8-dp.2.zip",
+      "id": "oxt-runtimes-0.2.8-dp.3",
+      "url": "https://github.com/SethMorrowSoftware/OpenXTalk-Beyond/releases/download/runtimes-0.2.8-dp.3/oxt-runtimes-0.2.8-dp.3.zip",
       "sha256": "<64 lowercase hex digits>",
       "size": 123456789,
       "kind": "zip",
       "strip": 1,
       "dest": "",
-      "rename": { "PROVENANCE.md": "PROVENANCE-oxt-runtimes-0.2.8-dp.2.md" },
+      "rename": { "PROVENANCE.md": "PROVENANCE-oxt-runtimes-0.2.8-dp.3.md" },
       "exclude": { "win-x86_64": ["Runtime/Windows/x86-64/**", "..."], "...": ["..."] },
       "description": "...", "licence": "...", "source": "..."
     }
@@ -828,7 +833,7 @@ xTalk Suite extensions are not assets: see
 The runtimes asset excludes, per platform, what that platform's own build
 makes (`make_runtimes_asset.py` writes these; `OWN_PARTS` there):
 
-| platform | left out of `oxt-runtimes-0.2.8-dp.2` | why |
+| platform | left out of `oxt-runtimes-0.2.8-dp.3` | why |
 |---|---|---|
 | `win-x86_64` | `Runtime/Windows/x86-64/**`, timezone `code/x86_64-win32/**` | the build's own runtime and timezone code |
 | `linux-x86_64` | `Runtime/Linux/x86-64/**`, timezone `code/x86_64-linux/**`, timezone `resources/**` | the build's own runtime and timezone code, and the zoneinfo data (tz.gyp `tzdata`, which the Windows builds do not make) |

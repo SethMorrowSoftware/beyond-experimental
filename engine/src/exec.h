@@ -3240,6 +3240,10 @@ void MCFilesEvalThereIsNotAProcess(MCExecContext& ctxt, MCStringRef p_path, bool
 void MCFilesEvalShell(MCExecContext& ctxt, MCStringRef command, MCStringRef& r_output);
 
 void MCFilesExecDeleteFile(MCExecContext& ctxt, MCStringRef p_target);
+// OXT-Beyond: "move file|folder <path> to trash" and "show <path> in
+// finder|explorer" (from HyperXTalk)
+void MCFilesExecMoveToTrash(MCExecContext& ctxt, MCStringRef p_target);
+void MCFilesExecRevealFile(MCExecContext& ctxt, MCStringRef p_target);
 
 void MCFilesExecCloseFile(MCExecContext& ctxt, MCNameRef p_filename);
 void MCFilesExecCloseDriver(MCExecContext& ctxt, MCNameRef p_device);
@@ -3301,6 +3305,8 @@ void MCFilesGetSerialControlString(MCExecContext& ctxt, MCStringRef& r_value);
 void MCFilesSetSerialControlString(MCExecContext& ctxt, MCStringRef p_value);
 void MCFilesGetHideConsoleWindows(MCExecContext& ctxt, bool& r_value);
 void MCFilesSetHideConsoleWindows(MCExecContext& ctxt, bool p_value);
+void MCFilesGetCloseEndedProcesses(MCExecContext& ctxt, bool& r_value);
+void MCFilesSetCloseEndedProcesses(MCExecContext& ctxt, bool p_value);
 
 void MCFilesGetShellCommand(MCExecContext& ctxt, MCStringRef& r_value);
 void MCFilesSetShellCommand(MCExecContext& ctxt, MCStringRef p_value);

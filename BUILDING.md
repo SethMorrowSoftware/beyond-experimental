@@ -221,7 +221,7 @@ The build calls `git` while configuring, so Git has to be on `PATH`.
 ### 2.5 Cygwin
 
 Several build steps (fetching the prebuilt libraries, flex and bison for
-the LiveCode Builder compiler, the time zone data) run as shell commands
+the xTalk Builder compiler, the time zone data) run as shell commands
 through `util\invoke-unix.bat`, which needs Cygwin. Install the 64-bit
 Cygwin into `C:\cygwin64` and do **not** add it to `PATH`.
 
@@ -670,7 +670,7 @@ LiveCode's Dictionary, the guides and Tom Perry's text dictionary
 (*Preferences > Dictionary*) are generated from their sources, the only
 copies Git keeps: the `.lcdoc` files of `docs/dictionary` and
 `docs/glossary` and mergJSON's (`mergjson/mergJSON.lcdoc`), the
-documentation comments of the LiveCode Builder modules in
+documentation comments of the xTalk Builder modules in
 `libscript/src` and `engine/src`, the guides in `docs/guides`
 and `ide/Documentation/guides`, and the documentation of the extensions
 that OXT-Beyond installs and of the IDE library. For the
@@ -706,7 +706,7 @@ keeps it in the work folder for the next run, and writes the
 documentation in a minute or so. On Linux or macOS it can use
 your own build instead, named as a second argument: a Linux build's
 `linux-<arch>-bin`, or a macOS build's `_build/mac/Release` (not tried
-yet). The engine's `modules/lci` decides which LiveCode Builder modules
+yet). The engine's `modules/lci` decides which xTalk Builder modules
 are documented, so the docs of a new module of `libscript/src` or
 `engine/src` need a newer pinned engine.
 
@@ -993,7 +993,7 @@ asset is one zip archive with a fixed URL, size and SHA-256:
 | `android_engine` | Optional, the runtimes asset only: the folder of OXT-Beyond's own Android engine (`Runtime/Android/Beyond`) when the asset carries it, built from the commit `source` names (see [Building the Android engine](#15-building-the-android-engine)). |
 | `description`, `licence`, `source` | Text for people and reports. |
 
-Today there is one asset, `oxt-runtimes-0.2.8-dp.2`: the Windows (x86-64
+Today there is one asset, `oxt-runtimes-0.2.8-dp.3`: the Windows (x86-64
 and x86) and Linux (x86-64 and x86) runtimes and the time zone library's
 code for them and its zoneinfo data, made from this repository's CI
 builds, the Android runtime's Java layer (`Runtime/Android/Classes`)
@@ -1002,11 +1002,11 @@ built from the same commit, and OXT-Beyond's own Android engine
 the rest of the Android runtime and its
 time zone library code carried over unchanged from the earlier asset
 `oxt-runtimes-1.15` (OpenXTalk Lite 1.15's files). Its `PROVENANCE.md` (installed as
-`PROVENANCE-oxt-runtimes-0.2.8-dp.2.md`) names the commit and the CI
+`PROVENANCE-oxt-runtimes-0.2.8-dp.3.md`) names the commit and the CI
 runs and lists every file; the 1.15 asset's provenance comes with it as
 `PROVENANCE-oxt-runtimes-1.15.md`. It is published as the file
-`oxt-runtimes-0.2.8-dp.2.zip` of this repository's release
-`runtimes-0.2.8-dp.2`. Each package leaves out the part its own build
+`oxt-runtimes-0.2.8-dp.3.zip` of this repository's release
+`runtimes-0.2.8-dp.3`. Each package leaves out the part its own build
 makes (the entry's `exclude`). The manifest names that release in this
 repository, so a fork downloads it from here too. To package
 without the external assets, for example while a new asset is not
@@ -1109,8 +1109,8 @@ own manifest, described next.
 
 OXT-Beyond ships the extensions of the
 [xTalk Suite](https://github.com/SethMorrowSoftware/xtalk-suite) built
-in (the [README](README.md#xtalk-suite-extensions) lists them): six LiveCode
-Builder libraries with native code and nine LiveCode Script libraries.
+in (the [README](README.md#xtalk-suite-extensions) lists them): six xTalk
+Builder libraries with native code and nine xTalk Script libraries.
 They are neither kept in this repository nor copied into it.
 [`tools/oxt/xtalk-extensions.json`](tools/oxt/xtalk-extensions.json)
 pins each member repository (`SethMorrowSoftware/<repository>`) at a
@@ -1136,16 +1136,30 @@ clone with `core.autocrlf=true` has other bytes in its working copy.
 **What is built.** For each LCB library, `Extensions\<id>\` with the
 `.lcb` source, `module.lcm` and `manifest.xml` from `lc-compile`,
 `code\<platform-id>\<library>` for Windows x86-64 and x86, Linux x86-64,
-x86 and arm64, macOS, and, for the seven native members, Android's
-`arm64-android`, `armv7-android`, `x86_64-android` and `x86-android`
+x86 and arm64, macOS, and, for every native member but gamepadxt and
+midixt, Android's `arm64-android`, `armv7-android`, `x86_64-android` and
+`x86-android`
 (the IDE maps the one for its platform into `revLibraryMapping`, the
 standalone builder copies the one for the target into a standalone, and
 the Android builder packs each Android one into an app as
 `lib/<abi>/lib<library>`), and `licenses\`. Every package carries the
 Android libraries, since each desktop IDE builds Android apps; the
-Android builder workflow builds an app with them for all four ABIs and
-runs each extension's smoke test in it on its emulators
-(`android_check.py ide --probe xtalk`, `device --xtalk`). `lc-compile` runs in that
+Android builder workflow builds an app with them, and with the script
+libraries over them, for all four ABIs, and on its emulators runs each
+extension's smoke test in it and then the suite's functional tests
+(`tools/ci/android-xtalk-tests.livecodescript`: known answers through
+SodiumXT and CoinXT, a Box2D and a Box3D world stepped, a scene drawn by
+render3dxt from a model read from the app's folder, a sound mixed with
+no device and read back from a WAV file, an Excel workbook written and
+read back cell for cell, a WebP picture saved and read back from a file,
+a QR code read out of a picture, an ENet connection, a WebRTC
+data channel and a curl request, each between two ends
+inside the one app, a torrent session that must start unpaused, listen
+on every address the device has and seed a file the app wrote (the
+session of a TorrentXT library built for an Android older than 7.0
+starts paused on Android 11 and later, and that is a failure), and a
+Nostr event signed and verified;
+`android_check.py ide --probe xtalk`, `device --xtalk`). `lc-compile` runs in that
 folder with relative paths, because `module.lcm` embeds the source path
 as given; writes the module interface into a temporary folder
 (`--interface`), never into `modules\lci` (which the build checks is
@@ -1427,27 +1441,27 @@ python tools\ci\run_engine_tests.py --bin win-x86_64-bin
 `linux-<arch>-bin`, or on macOS `_build/mac/Release`), without a user
 interface:
 
-- `lcs`: each `on Test...` handler of the LiveCode Script tests in
+- `lcs`: each `on Test...` handler of the xTalk Script tests in
   `tests/lcs` (about 850), in its own run of the build's standalone
   engine with `-ui` (`tests/_testrunner.livecodescript invoke`) and a
-  time limit (`--timeout`, 300 seconds). The LiveCode Builder modules of
+  time limit (`--timeout`, 300 seconds). The xTalk Builder modules of
   `tests/` are compiled into `_tests/_build` first.
-- `ext`: the extensions' own LiveCode Script tests, those of a folder
+- `ext`: the extensions' own xTalk Script tests, those of a folder
   named `tests` or `test` of an extension in `extensions/` (the JSON
   library's, the widgets'...: about 80), run as those of `lcs` are and
   named by their path in `extensions/`. They load the extensions they
   test from the build's `packaged_extensions`. (LiveCode ran them with
   `extensions/Makefile`'s `extensions-check`, which no build here calls.)
-- `lcb`: the LiveCode Builder tests of `tests/lcb` (the virtual machine,
+- `lcb`: the xTalk Builder tests of `tests/lcb` (the virtual machine,
   the standard library and compiled code): each `Test...` handler of each
   module, in its own run of `lc-run` with the test library. (LiveCode's
   `tests/_testrunner.lcb` does the same, but not on Windows.)
-- `compiler`: the LiveCode Builder compiler tests of `tests/lcb/compiler`.
-- `parser`: the LiveCode Script parser tests.
+- `compiler`: the xTalk Builder compiler tests of `tests/lcb/compiler`.
+- `parser`: the xTalk Script parser tests.
 
 `--suite` runs some of them; `--filter` takes a regular expression that
 the name `<suite>: <test>` must match, for example
-`--filter "core/strings/sort"`. `--jobs N` runs the LiveCode Script tests
+`--filter "core/strings/sort"`. `--jobs N` runs the xTalk Script tests
 of N files at a time (the tests of one file one after the other); the
 files that use fixed ports, the clipboard or programs they start
 (`SERIAL_FILES` in the script) run one after the other. CI uses
@@ -2253,10 +2267,10 @@ Linux build's job "Web runtime check" on the web runtime alone
 
 ### Web engine tests
 
-[`tools/ci/web_tests.py`](tools/ci/web_tests.py) runs the LiveCode
+[`tools/ci/web_tests.py`](tools/ci/web_tests.py) runs the xTalk
 Script tests of `tests/lcs` in the web engine, as the
 [engine tests](#engine-tests) run them in the desktop's. It compiles
-the LiveCode Builder modules of `tests/` with the build's `lc-compile`,
+the xTalk Builder modules of `tests/` with the build's `lc-compile`,
 makes a web standalone of the tests with the build's development engine
 (as the [web standalone check](#web-standalone-check) does with
 `--runtime`), serves it on 127.0.0.1 and opens it in headless Chromium.
@@ -2270,7 +2284,7 @@ again at the next test. Tests that need what a page cannot have skip
 there through the test library's requirements: sockets and other
 programs (`sockets` and `shell` in
 [`tests/_testlib.livecodescript`](tests/_testlib.livecodescript)), and
-the IDE and the LiveCode Builder compiler (the tests run in a
+the IDE and the xTalk Builder compiler (the tests run in a
 standalone).
 
 ```sh
@@ -2297,20 +2311,20 @@ it packages.
 ### Android script tests
 
 [`tools/ci/android_tests.py`](tools/ci/android_tests.py) runs the
-LiveCode Script tests of `tests/lcs` on an Android emulator, as the
+xTalk Script tests of `tests/lcs` on an Android emulator, as the
 [web engine tests](#web-engine-tests) run them in the web engine, once
 with LiveCode 9.6.3's Android engine and once with OXT-Beyond's own, so
 that what a stack would see differently with the other engine is known
 before either is the default. `prepare` puts the tests beside the stack
 that the [Android standalone check](#android-standalone-check) makes as
-its "tests" probe: the checkout's `tests/` folder, with the LiveCode
+its "tests" probe: the checkout's `tests/` folder, with the xTalk
 Builder modules compiled by the IDE's own `lc-compile` and the files of
 the checkout that the tests read, and the extensions the tests load,
 from the IDE's `Extensions` folder (one the IDE does not have is noted,
 and the tests that load it fail). The IDE's builder builds the
 standalone, whose main stack is named `StandaloneTestRunnerMainstack`,
 as LiveCode's standalone test runner's is, so that tests needing the
-IDE or the LiveCode Builder compiler skip; its script,
+IDE or the xTalk Builder compiler skip; its script,
 [`tools/ci/android-tests.livecodescript`](tools/ci/android-tests.livecodescript),
 copies the tests into the app's documents folder (so that a test can
 write beside itself), runs the test commands one after the other, each
@@ -2737,8 +2751,8 @@ build again.
 `cmd /c ..\make.cmd` rather than `..\make.cmd`.
 
 **Packaging fails to download the runtimes asset**
-(`oxt-runtimes-0.2.8-dp.2.zip`). The download comes from this
-repository's `runtimes-0.2.8-dp.2` release (also in a fork, which needs
+(`oxt-runtimes-0.2.8-dp.3.zip`). The download comes from this
+repository's `runtimes-0.2.8-dp.3` release (also in a fork, which needs
 no copy of its own), so a failure is usually the network:
 a proxy or firewall, or no access to `github.com` and its download
 servers. Copy the file into the cache folder, where it is used without
@@ -2796,7 +2810,7 @@ A push or pull request that changes nothing a platform's build uses
 starts no build of that platform: documentation (the Markdown files at
 the top of the repository, the issue forms and the pull request
 template), the workflows and scripts that build nothing (`release.yml`,
-`runtimes.yml`, `tag-release.yml`, the screenshot and check-by-hand
+`runtimes.yml`, `tag-release.yml`, `web-prerelease.yml`, the screenshot and check-by-hand
 workflows, `ci-checks.yml` and `tools/ci/tests`), and what only the
 other platforms use (their build workflows, the `.ps1` scripts for
 Windows, and so on). Each build workflow lists these in its
@@ -3025,6 +3039,22 @@ runs. The unit tests of the CI scripts run on Linux on every pull request
 (`ci-checks.yml`), and on Windows and macOS only when something under
 `tools/`, `util/` or `.github/` changes (`ci-checks-other-os.yml`).
 
+Those short jobs, each workflow's "Draft check" (Android engine's "What
+the change needs") and draft-status's "Platform builds status", can run on a
+self-hosted runner on the maintainer's own Linux PC (since 2026-11-21): on
+that day the few-second jobs waited 15 to 66 minutes for one of GitHub's
+machines, and every build of a pull request waited behind them. A job goes
+there only while the repository variable `PC_RUNNERS_LINUX` is `on`, and only
+for a push, a dispatch, or a pull request from a branch of this repository; a
+pull request from a fork, and every other event, runs on GitHub's
+`ubuntu-24.04` as before. No other job names a self-hosted runner.
+`tools/ci/tests/test_pc_runners.py` holds all of this by evaluating each
+`runs-on` the way Actions does. The runner's setup (a service under its own
+account with no sudo, a hard CPU and memory cap, nothing on the screen) is
+the xTalk Suite's `tools/pc-runners/`, described in its
+`docs/PC-RUNNERS.md`. A job sent to the PC waits for it, so before the PC is
+off for long, set the variable to anything but `on`.
+
 The workflow [`.github/workflows/runtimes.yml`](.github/workflows/runtimes.yml)
 ("Runtimes asset") is only started by hand: it makes the runtimes asset
 from the outputs of one Windows and one Linux run, and optionally an
@@ -3072,7 +3102,7 @@ it.
    limitations if they changed. Leave `ide/.buildnumber` at `0`.
    `ide/.codename` holds the release name ("Frankenstein" for 0.2.1,
    "Bug Hunt" for 0.2.7's release candidates, "Make It So" for 0.2.7
-   and kept for 0.2.8-dp.1 and 0.2.8-dp.2),
+   and kept for 0.2.8-dp.1, 0.2.8-dp.2, 0.2.8-dp.2.1 and 0.2.8-dp.3),
    which the About window shows and the GitHub release's title carries;
    change it for a release with a new name, together with its artwork
    (`Installer/oxt-beyond/branding/README.md`).
@@ -3255,6 +3285,31 @@ A release that is published is final: `release.yml` never changes or
 replaces it (prepare and publish both stop with an error for a tag that
 has one), and its tag must never be moved or deleted. Fix a problem in a
 published release with a new version.
+
+### A web pre-release for the community gallery
+
+The community gallery
+([oxt-stacks/oxt-community-stacks](https://github.com/oxt-stacks/oxt-community-stacks))
+plays its stacks in a Stack Player that its `tools/pins.json` pins to
+the files of one release, by SHA-256. When the web engine gains
+something a shared stack needs (an xTalk Suite library linked in, for
+example) and the next release is some way off,
+[`web-prerelease.yml`](.github/workflows/web-prerelease.yml) gives the
+gallery a player without a release of the desktop programs: Actions >
+*Web pre-release* > Run workflow, on `main`, with a label such as
+`2026.11.21`.
+
+It builds nothing. It takes the Stack Player zip and the Linux x86-64
+binaries from the packages that `build-linux.yml` made and tested for
+the commit `main` points at, checks them against that build's
+`SHA256SUMS`, and publishes them with a `SHA256SUMS` of their own under
+the tag `web-<label>`, as a pre-release that is never the latest. The
+tag does not begin with `v`, so `release.yml` does not start and
+nothing that looks for the newest release (the website, the workflows
+that fetch a release's files, the IDE) sees it. A label that exists is
+refused: a tag is never moved and a published file never replaced. The
+gallery then moves its pins to the new tag in a pull request of its
+own, where its tests play every stack in the new player.
 
 ## 11. Working on the IDE
 
@@ -3633,8 +3688,9 @@ site is static files: serve the folder with any web server (for example
 #### The xTalk Suite's libraries in the web IDE (experimental)
 
 A browser opens no native library, so the web IDE's engine links the
-xTalk Suite's SodiumXT, Box2Dxt, CoinXT and DataChannelXT into itself,
-and the extensions the IDE ships call them unchanged
+xTalk Suite's SodiumXT, Box2Dxt, CoinXT, DataChannelXT, box3dxt,
+render3dxt, audioxt, xlsxt, gamepadxt, webpxt, barcodext and midixt into
+itself, and the extensions the IDE ships call them unchanged
 ([`engine/src/em-xtalk-web.cpp`](engine/src/em-xtalk-web.cpp) says how
 they are registered). The web standalone engine, which every HTML5
 standalone and the Stack Player are built on, links them too
@@ -3649,7 +3705,15 @@ which makes every symbol of each object local but its table, so that two
 members carrying the same vendored code link side by side.
 DataChannelXT's web build is not libdatachannel: it is the same `dcx_*`
 contract over the browser's own WebRTC (`RTCPeerConnection`), so peers
-and channels behave as the browser's do. TorrentXT and ENetXT need raw
+and channels behave as the browser's do. gamepadxt's is SDL's gamepad
+layer as SDL builds it for the web, which reads the browser's Gamepad
+API: a browser shows a page a controller only after a button on it is
+pressed, and gamepadxt's virtual pads need no controller at all. midixt's
+web build, like DataChannelXT's, is not its desktop library: it is the
+same `midi_*` shim over the browser's Web MIDI instead of RtMidi, which
+asks the visitor once, at the first call that lists or opens a port, and
+refuses a virtual port, which Web MIDI cannot make; what arrives waits in
+a queue that `midiPoll` drains. TorrentXT and ENetXT need raw
 TCP and UDP sockets, which a page cannot open, and OnionXT a tor daemon
 reached over TCP, so none of them has a web build: a call to TorrentXT
 or ENetXT throws an error a script can catch, and OnionXT's script runs
@@ -3669,7 +3733,9 @@ in the web IDE in Chromium, Firefox and WebKit (with
 libraries, xTalk Chat against a local Nostr relay
 ([`tools/ci/nostr_test_relay.py`](tools/ci/nostr_test_relay.py)), Hold'em's
 self-test, the Box2Dxt platformer, DataChannelXT's own harness (a live
-loopback in the page) and the refusals of TorrentXT and ENetXT, with the
+loopback in the page), midixt's ports through a stand-in for the
+browser's Web MIDI with a loop cable (CI's browsers have no MIDI device)
+and the refusals of TorrentXT and ENetXT, with the
 apps, that harness and NostrXT's relay
 library (which has a browser transport) taken from the suite at the
 pinned commit (`xtalk_web_libraries.py test-files`).

@@ -143,7 +143,7 @@ clone at the new one.
 ## Status
 
 **OXT-Beyond 0.2.7 "Make It So"** is the current stable release, and
-**0.2.8-dp.2** is the current developer preview: the second look at
+**0.2.8-dp.3** is the current developer preview: the third look at
 0.2.8, with what has been built and fixed since 0.2.7, for anyone who
 would like it early and does not mind telling us what breaks. Both are
 on the
@@ -169,6 +169,7 @@ every change, release by release.
 
 | Version | What it brings |
 | --- | --- |
+| [0.2.8-dp.3](#028-dp3-the-third-developer-preview-of-028) | The third developer preview of 0.2.8, with HyperXTalk's best in it: autocomplete with parameter hints in the Script Editor, the markdownText of fields, `move file ... to trash` and `show ... in finder`, language words as array keys, effects drawn on widgets and externals in folders of their own; the SVG Drawing widget; midixt built in, on the desktop and in the browser; the opt-in closeEndedProcesses; smaller downloads; and fixes for yellow-green graphics, the Mac File menu's stray Exit, Copy and Paste on the first press, a crash on Ubuntu 26.04, a UDP listener that spun a core, shell() spinning on Linux, and TorrentXT on Android 11 and later |
 | [0.2.8-dp.2](#028-dp2-the-second-developer-preview-of-028) | The second developer preview of 0.2.8, again with stacks made for phones as its highlight: Ember Bricks, a brick breaker with an online duel that opens on a lobby; a Target menu for the API an Android app targets, and Android libraries with their own resources; the browser widget and revBrowser on Chromium 156; curlxt and tsNet's calls built in; MP4 on Windows with no codec to install; animated GIFs as browsers show them; the community's stacks in the File menu; about fifty more HyperCard externals that do their work; and the fixes for what 0.2.8-dp.1's testers reported: the Quick Start Guide's first lesson and its lessons in the dark, a build that stops and leaves the stack as it was, the keyboard left in the Linux backdrop, full screen that stays on an iPad, and four engine crashes |
 | [0.2.8-dp.1](#028-dp1-the-first-developer-preview-of-028) | The first developer preview of 0.2.8, with stacks made for phones as its highlight: new Android apps are built with OXT-Beyond's own Android engine, launcher icons can be adaptive and themed, an app with an .aar builds again, and Nova Rescue is flown by tilt; WebSockets, desktop-width fonts and a self-hosted bundle on the web; MySQL 8.4 and PostgreSQL's SCRAM logins; video on Linux without mplayer; Windows follows a switch between light and dark at once; and the dark appearance's last unreadable menus and dialogs |
 | [0.2.7](#027-make-it-so) | The stable release that the Bug Hunt's nineteen rounds made, with the last of the forum's finds squashed: the SVG icon picker, the Message Box's colours, the Extension Manager's icons and the Project Browser's Refresh arrows in the dark; ticks in a submenu, so File > Import Stack's HyperCard options show; the "menu" button style in the Inspector; Android apps that can be drawn edge to edge, a box to build them with OXT-Beyond's own Android engine, and no hang on a density change; the "Make It So" splash, installer and banner |
@@ -224,7 +225,7 @@ Earlier versions, from 0.2.1 to 0.2.5, are described under
   x86-64, macOS for Apple Silicon and Intel, Linux x86-64), and so are
   the standalone runtimes that every package carries for Windows
   (x86-64 and x86) and Linux (x86-64 and x86): CI builds the 32-bit
-  engines for them, and a release asset (`oxt-runtimes-0.2.8-dp.2.zip`)
+  engines for them, and a release asset (`oxt-runtimes-0.2.8-dp.3.zip`)
   brings each platform's runtimes into the other packages. The web
   engine of HTML5 standalones, which every package carries, is built
   from this repository too (see [The engine](#the-engine)), and so is
@@ -251,7 +252,7 @@ Earlier versions, from 0.2.1 to 0.2.5, are described under
   machine can run; Android packages are built by the IDE's Android
   builder with a real Android SDK, checked, and run on Android emulators
   by a workflow of their own (see [BUILDING.md](BUILDING.md#android-standalone-check)),
-  and the LiveCode Script tests run on an Android emulator with both
+  and the xTalk Script tests run on an Android emulator with both
   Android engines (see [BUILDING.md](BUILDING.md#android-script-tests)).
 - **Some old third-party libraries.** OpenSSL (3.5.9, a long-term
   support release), curl (8.22.0) and ICU (78.3) are current, built from
@@ -311,7 +312,7 @@ Earlier versions, from 0.2.1 to 0.2.5, are described under
   standalone runtimes, get the smoke test, the engine tests and the
   standalone check too. Every build on all three platforms also runs the
   engine tests that LiveCode Community keeps in `tests/` (about 1,150:
-  LiveCode Script, LiveCode Builder, the LiveCode Builder compiler and
+  xTalk Script, xTalk Builder, the xTalk Builder compiler and
   the script parser)
   and compares the failures with a list of known ones (see
   [BUILDING.md](BUILDING.md#engine-tests)). CI also checks that the
@@ -358,7 +359,7 @@ version, for example `0.1.0`:
 | | `OXT-Beyond-<version>-linux-x86_64-binaries.tar.xz` | Only the built engine, externals and tools (`linux-x86_64-bin`), without debug symbols and the build's own tools, and the licence files. |
 | | `OXT-Beyond-<version>-linux-x86_64-symbols.tar.xz` | Debug symbols (`.dbg`), for developers. |
 | | `OXT-Beyond-<version>-linux-x86_64-server.zip` | OXT-Beyond Server: the server engine with its externals and database drivers, to run `.lc` pages on a web server (see [OXT-Beyond Server](#oxt-beyond-server)). From 0.2.7-rc.6.15; experimental. |
-| 64-bit ARM Linux with glibc 2.31 or later (from 0.2.4-rc.2) | `OXT-Beyond-<version>-linux-arm64.tar.xz` | The same program folder for 64-bit ARM, such as a Raspberry Pi 3, 4 or 5 on a 64-bit system, without the browser widget (see [Linux (64-bit ARM)](#linux-64-bit-arm)). |
+| 64-bit ARM Linux with glibc 2.31 or later (from 0.2.4-rc.2) | `OXT-Beyond-<version>-linux-arm64.tar.xz` | The same program folder for 64-bit ARM, such as a Raspberry Pi 3, 4 or 5 on a 64-bit system, whose browser widget uses WebKitGTK and which has no revBrowser (see [Linux (64-bit ARM)](#linux-64-bit-arm)). |
 | | `OXT-Beyond-<version>-linux-arm64-binaries.tar.xz` | Only the built engine, externals and tools (`linux-arm64-bin`), as for x86-64. |
 | | `OXT-Beyond-<version>-linux-arm64-symbols.tar.xz` | Debug symbols (`.dbg`), for developers. |
 | | `OXT-Beyond-<version>-linux-arm64-server.zip` | OXT-Beyond Server: the server engine with its externals and database drivers, to run `.lc` pages on a web server (see [OXT-Beyond Server](#oxt-beyond-server)). From 0.2.7-rc.6.15; experimental. |
@@ -379,7 +380,8 @@ Releases whose tags do not start with `v`, such as `prebuilts-v1`,
 `runtimes-0.2.7-rc.6.16b`, `runtimes-0.2.7-rc.6.17`,
 `runtimes-0.2.7-rc.6.18`, `runtimes-0.2.7-rc.6.18b`,
 `runtimes-0.2.7-rc.6.19`, `runtimes-0.2.7`,
-`runtimes-0.2.8-dp.1` and `runtimes-0.2.8-dp.2`, are not
+`runtimes-0.2.8-dp.1`, `runtimes-0.2.8-dp.2`,
+`runtimes-0.2.8-dp.2.1` and `runtimes-0.2.8-dp.3`, are not
 programs. They hold files that the build and the packager download: the
 prebuilt third-party libraries of earlier versions and the standalone
 runtimes for other platforms.
@@ -597,9 +599,14 @@ What it needs:
   (from 0.2.7-rc.1): their 64-bit libraries need glibc 2.28 at most and
   carry their own OpenSSL. Up to 0.2.6, SodiumXT needed glibc 2.33 and
   DataChannelXT glibc 2.38 and OpenSSL 3. The 32-bit libraries that x86
-  standalones get still need glibc 2.33 (SodiumXT), 2.34 (Box2Dxt),
-  2.34 and OpenSSL 3 (curlxt), or 2.38 and OpenSSL 3 (TorrentXT and
-  DataChannelXT).
+  standalones get still need glibc 2.33 (SodiumXT and xlsxt), 2.34
+  (Box2Dxt, box3dxt, audioxt and render3dxt), 2.34 and OpenSSL 3
+  (curlxt), 2.38 (gamepadxt, barcodext and midixt), or 2.38 and
+  OpenSSL 3 (TorrentXT and DataChannelXT). midixt's libraries also need
+  ALSA's library, through which Linux has its MIDI (`libasound.so.2`: the
+  package `libasound2`, `libasound2t64` on Ubuntu 24.04 and Debian 13 and
+  later, or `alsa-lib`); the browser widget needs it too. Every desktop
+  Linux has it, and without it only midixt fails to load.
 - **The player** runs `/usr/bin/mplayer` when it is installed, and plays
   through GStreamer 1.x when it is not (many distributions no longer
   package mplayer). For GStreamer, install its plugins: on Debian and
@@ -678,9 +685,15 @@ it.
 
 What it does not have:
 
-- **No browser widget and no revBrowser.** They use CEF, whose Linux ARM build
-  OXT-Beyond does not take yet, so the package leaves them out, the IDE opens web
-  pages in your web browser, and the Tools palette has no browser widget.
+- **No CEF, so no revBrowser.** OXT-Beyond does not take CEF's Linux ARM
+  build yet, so the package has no CEF, and revBrowser, which only uses
+  CEF, is left out. The browser widget uses WebKitGTK instead (#497), as
+  it does on x86-64 wherever CEF cannot load: install it with
+  `sudo apt install libwebkit2gtk-4.1-0` (Raspberry Pi OS, Debian,
+  Ubuntu). With WebKitGTK the IDE shows the dictionary and other web
+  pages in its own windows and the Tools palette has the browser widget;
+  without it the IDE opens them in your web browser and the Tools
+  palette has no browser widget.
 - **Standalones for 64-bit ARM Linux are built only by this package**,
   from its own runtime ("Linux arm64" in the standalone settings). The
   other packages carry no arm64 runtime, so they do not offer it.
@@ -909,8 +922,8 @@ and in the IDE:
 OXT-Beyond 0.2.1 "Frankenstein" (its release candidates were 0.2.1-rc.1
 to 0.2.1-rc.7) adds:
 
-- LiveCode Community's engine test suites, about 1,150 tests of LiveCode
-  Script, LiveCode Builder, the LiveCode Builder compiler and the script
+- LiveCode Community's engine test suites, about 1,150 tests of xTalk
+  Script, xTalk Builder, the xTalk Builder compiler and the script
   parser, on every build of all three platforms, compared with lists of
   known failures (see [BUILDING.md](BUILDING.md#engine-tests));
 - fixes for engine bugs that those tests and the compiler's warnings
@@ -932,7 +945,7 @@ to 0.2.1-rc.7) adds:
   resolves; on Linux the last second of 1969 converts, and file lists on
   the clipboard and in drag and drop keep names with spaces and "+"; on
   macOS, Java support finds Java 9 and later, on Apple Silicon an
-  Objective-C exception in a method that LiveCode Builder calls is an LCB
+  Objective-C exception in a method that xTalk Builder calls is an LCB
   error again instead of ending the program, and without a user interface
   (`-ui`) socket events are handled at once instead of at the next timer,
   so libURL's requests no longer take until their 60-second timeout
@@ -956,10 +969,10 @@ to 0.2.1-rc.7) adds:
   such as the euro sign or curly quotes depended on how the string had
   been made); a pressed button's hilite follows the pointer again
   instead of flickering; exporting a widget whose kind is not loaded no
-  longer crashes; LiveCode Builder's base conversion no longer crashes
+  longer crashes; xTalk Builder's base conversion no longer crashes
   for a base below 2; and the `constraints` of a player (QTVR, which no
   current player supports) are zeros instead of random numbers;
-- one change in behaviour: `baseConvert` (and LiveCode Builder's
+- one change in behaviour: `baseConvert` (and xTalk Builder's
   `converted from base`) of a number above 4,294,967,295 is an error
   instead of a wrong, wrapped-around result;
 - the repository's new address,
@@ -1383,7 +1396,7 @@ on:
   wait for one, and what the model may do. **Get Models** lists the
   provider's models and says at once whether the key works. The
   current models are offered before that, and one is chosen for you.
-- **Answers it has checked.** The model gets a guide to LiveCode Script
+- **Answers it has checked.** The model gets a guide to xTalk Script
   on OXT-Beyond, and every block of xTalk code in its answer is
   compiled before you read it; one that does not compile goes back to
   the model to correct (up to 5 times, which you can change). The
@@ -1706,6 +1719,91 @@ undo, and the folders where it keeps copies of stacks before changing
 them are readable by you alone. The Script Editor can tell the bridge
 the line its caret was on. With the bridge off, nothing else differs
 from 0.2.6-rc.1.
+
+#### 0.2.8-dp.3: the third developer preview of 0.2.8
+
+OXT-Beyond 0.2.8-dp.3 is the third developer preview of 0.2.8: the
+fixes for what was reported in 0.2.8-dp.2 and 0.2.8-dp.2.1, and much
+that came from HyperXTalk. 0.2.7 "Make It So" stays the stable
+release. Help > Check for Updates offers this preview to someone who
+runs an earlier 0.2.8 preview; on 0.2.7 it says you are up to date.
+
+New:
+
+- **Autocomplete in the Script Editor.** A list of completions beside
+  the caret, the language's words and the message path's handlers, by
+  their start or their humps, with a call's parameters shown above the
+  line and what fits where the word is (commands at a statement's
+  start, messages after "on", properties after "set the"). It is off
+  until Edit > Options > Autocomplete is ticked. From HyperXTalk
+  (Emily-Elizabeth Howard and Stam Kapetanakis) (#627, #646).
+- **The language.** `move file <path> to trash` (or `move folder`) and
+  `show <path> in finder` (or `in explorer`); the markdownText of a
+  field, or a chunk of one; a word of the language as a key in
+  brackets (`tArray[from]`); randomBytes without the security library;
+  and the opt-in global `the closeEndedProcesses`, which makes Linux
+  and macOS drop a process read to its end from the openProcesses, as
+  Windows always has (#627, #633).
+- **Widgets and extensions.** The SVG Drawing widget shows a whole SVG
+  in its own colours, scaled to fit, and a saved stack shows it
+  without the drawing library (#579). dropShadow, innerShadow,
+  outerGlow, innerGlow and colorOverlay are drawn on widgets, and an
+  external in a folder of its own loads (#627). midixt is built in,
+  under ShowControl's id and handlers, and in the web engines over the
+  browser's Web MIDI (#630). box3dxt's renderer paints a sky (#624).
+- **Smaller downloads, the same files:** the Mac disk image about 850
+  MB instead of 1,056 MB, the Linux x86-64 package about 638 MB
+  instead of 707 MB, and the Windows installer about 135 MB smaller
+  (#636).
+- **Docs in OXT-Beyond's own name**, xTalk Script and xTalk Builder,
+  with every guide screenshot taken from OXT-Beyond (#637, #640).
+
+Fixed:
+
+- New graphics no longer come out under a yellow-green overlay once
+  the Property Inspector's colour editor has been used (Stam
+  Kapetanakis, from HyperXTalk) (#638).
+- On macOS, File no longer gains an Exit item, nor Help an About item,
+  after the pointer slides from File to Edit and back (#644).
+- Cmd+C and Cmd+V (Ctrl on Windows and Linux) work the first time they
+  are pressed (#621).
+- On Ubuntu 26.04 the IDE no longer crashes as the Extension Builder
+  opens when the machine has its own FontAwesome font (reported by
+  Brian Milby) (#642).
+- Closing a UDP listener that had heard a sender no longer leaves a
+  thread using a whole core on Linux and macOS, nor stalls the
+  engine's other sockets, and quitting afterwards can no longer crash
+  (#628). shell() on the server no longer spins on Linux when a child
+  ends at the wrong moment (Stam Kapetanakis, from HyperXTalk) (#635).
+- TorrentXT on Android needs Android 7.0 or later, and a session now
+  starts, listens and seeds on Android 11 and later (#625). webpxt
+  refuses an animation longer than WebP can time, where it wrote it
+  wrong (#629).
+- The Project Browser's own stack no longer carries the stray audio clip
+  "Clap.mp3" (#632); a click into a custom property's value in the
+  Property Inspector no longer selects all of it, and the splash opens
+  on the screen the menu bar was last on (from HyperXTalk) (#627); the
+  preferences no longer keep window positions for temporary stacks
+  (Mark Wieder, from HyperXTalk) (#646); the Dictionary's `return`
+  entry names its placeholder apart from its keywords (#645).
+
+What a script can see:
+
+- `move ... to trash`, `show ... in finder`, the markdownText of a
+  field, keys such as `tArray[from]`, the graphic effects of a widget
+  and `the closeEndedProcesses` are new; each is written so that a
+  script that worked before works as before, and CHANGELOG.md says how
+  for each (#627, #633). `show tVar in finder` with tVar holding an
+  object's name, which showed the object and stopped, now gives "file
+  not found".
+- A write to a datagram name whose listener has closed fails with
+  "error sending datagram", where it went out through whatever had
+  been given the closed descriptor since (#628).
+- No other change is meant to be seen by a script.
+
+Known issues of this preview: those of 0.2.8-dp.2 below, bar the
+Android 15 navigation bar, which 0.2.8-dp.2.1 fixed. The Script
+Editor's autocomplete is new and off by default; a report is welcome.
 
 #### 0.2.8-dp.2: the second developer preview of 0.2.8
 
@@ -4943,9 +5041,17 @@ repositories at pinned commits when OXT-Beyond is packaged (see
 | `org.openxtalk.library.datachannel`, `dataChannelHelpers` | DataChannelXT: WebRTC data channels through libdatachannel, and its script helpers | [dataChannelXT](https://github.com/SethMorrowSoftware/dataChannelXT) |
 | `org.openxtalk.box2dxt`, `box2dxt-kit` | Box2Dxt: 2D physics through Box2D, and the Box2Dxt Kit | [Box2Dxt](https://github.com/SethMorrowSoftware/Box2Dxt) |
 | `org.openxtalk.library.coin`, `coinxt` | CoinXT: Bitcoin and Ethereum cryptography (hashes, keys, addresses, HD wallets, transactions) | [CoinXT](https://github.com/SethMorrowSoftware/CoinXT) |
-| `onionxt`, `onion-httpd` | OnionXT: Tor transport and onion services, and a small HTTP server on top of it (LiveCode Script) | [OnionXT](https://github.com/SethMorrowSoftware/OnionXT) |
-| `nostrxt`, `nostr-relay` | NostrXT: the Nostr protocol and a relay client (LiveCode Script) | [NostrXT](https://github.com/SethMorrowSoftware/NostrXT) |
+| `onionxt`, `onion-httpd` | OnionXT: Tor transport and onion services, and a small HTTP server on top of it (xTalk Script) | [OnionXT](https://github.com/SethMorrowSoftware/OnionXT) |
+| `nostrxt`, `nostr-relay` | NostrXT: the Nostr protocol and a relay client (xTalk Script) | [NostrXT](https://github.com/SethMorrowSoftware/NostrXT) |
 | `org.openxtalk.library.curl`, `curlHelpers`, `tsNetCompat` | curlxt: HTTP(S), FTP(S), SFTP, SCP and SMTP through libcurl, its script helpers, and the tsNet calls by name over them | [xtalk-suite, `curlxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/curlxt) |
+| `org.openxtalk.library.boxthreed` | box3dxt: 3D rigid-body physics through Box3D (bodies, eight kinds of shape, joints, ray casts, contact and sensor events) and a small renderer that draws the world into a picture for an image | [xtalk-suite, `box3dxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/box3dxt) |
+| `org.openxtalk.library.audioxt` | audioxt: sound through miniaudio, beside the engine's own `play` (mixing, streaming, tones, 3D sound and microphone capture; WAV, FLAC and MP3) | [xtalk-suite, `audioxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/audioxt) |
+| `org.openxtalk.library.xlsxt` | xlsxt: Excel `.xlsx` workbooks written (cells, formats, formulas, charts, pictures, page setup) and read back, through libxlsxwriter, zlib and Expat; also in the web engine | [xtalk-suite, `xlsxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/xlsxt) |
+| `org.openxtalk.library.gamepadxt` | gamepadxt: game controllers through SDL 3 (Xbox, PlayStation, Switch and most other pads in one button layout, plugged in and out while a stack runs, with rumble, lights and virtual pads made in software); also in the web engine, where it reads the browser's Gamepad API | [xtalk-suite, `gamepadxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/gamepadxt) |
+| `org.openxtalk.library.webpxt` | webpxt: WebP pictures read and written through libwebp, lossy and lossless, with transparency, and animations a frame at a time | [xtalk-suite, `webpxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/webpxt) |
+| `org.openxtalk.library.barcodext` | barcodext: QR codes and barcodes read out of pictures and made as pictures, SVG or rows of squares, through zxing-cpp | [xtalk-suite, `barcodext/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/barcodext) |
+| `org.openxtalk.library.renderthreed` | render3dxt: a software 3D renderer that draws textured, lit meshes (OBJ models, PNG, JPEG, BMP and TGA textures, lights, fog, a camera, picking) into a picture for an image, and draws what box3dxt simulates | [xtalk-suite, `render3dxt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/render3dxt) |
+| `org.openxtalk.library.midi` | midixt: realtime MIDI through RtMidi (the computer's MIDI ports listed, opened and sent to, and what arrives read by polling, with its timing; virtual ports on macOS and Linux); also in the web engine, where it uses the browser's Web MIDI | [xtalk-suite, `midixt/`](https://github.com/SethMorrowSoftware/xtalk-suite/tree/main/midixt) |
 
 - The IDE loads them when it starts, like its other built-in
   extensions; the *Extension Manager* lists them and can unload them or
@@ -4977,18 +5083,30 @@ repositories at pinned commits when OXT-Beyond is packaged (see
   inclusions a stack needs, adds an LCB library whose handlers your
   scripts use, together with its native library for the target platform.
   The extensions have native libraries for Windows x86-64 and x86, Linux
-  x86-64, x86 and arm64, and macOS. The seven LCB libraries (SodiumXT,
-  TorrentXT, enetxt, DataChannelXT, Box2Dxt, CoinXT and curlxt) also have
-  them for Android's four architectures (arm64-v8a, armeabi-v7a, x86_64
-  and x86), which the Android builder packs into an app; the four that
-  open sockets (TorrentXT, enetxt, DataChannelXT and curlxt) add the
-  INTERNET permission to an app that includes them. Each one's smoke test
-  runs in an Android app on the Android builder workflow's x86_64
-  emulators (Android 13, and Android 16 with 16 KB pages); the ARM
-  libraries have not run on a device yet. The standalone builder
-  never adds the script libraries by itself: tick them in *Standalone
-  Settings*, with the LCB libraries they need (for example `coinxt` with
-  `org.openxtalk.library.coin`).
+  x86-64, x86 and arm64, and macOS. The thirteen LCB libraries with native
+  code other than gamepadxt and midixt (SodiumXT, TorrentXT, enetxt,
+  DataChannelXT, Box2Dxt, CoinXT, curlxt, box3dxt, render3dxt, audioxt,
+  xlsxt, webpxt and barcodext) also have them for Android's four architectures
+  (arm64-v8a, armeabi-v7a, x86_64 and x86), which the Android builder
+  packs into an app; the four that open sockets (TorrentXT, enetxt,
+  DataChannelXT and curlxt) add the INTERNET permission to an app that
+  includes them. TorrentXT's Android libraries need Android 7.0 or
+  later, where the others run from Android 5.0: built for an older
+  Android, libtorrent asks for a netlink socket that Android 11 and
+  later refuse an app, and a session started paused there, listening
+  nowhere. Android 5.0 and 6.0 lack a call the newer library asks for
+  and will not load it (not tried on one), so give an app that needs
+  torrents a minimum Android version of 7.0. Each one's smoke test runs
+  in an Android app on the Android builder workflow's x86_64 emulators
+  (Android 13, and Android 16 with 16 KB pages); the ARM libraries have
+  not run on a device yet. An app that records with audioxt must ask
+  for the RECORD_AUDIO permission
+  itself. gamepadxt has no Android libraries: SDL reaches controllers
+  there through a Java activity of its own, which an OXT-Beyond app does
+  not have. Nor has midixt: RtMidi's Android backend needs Android 10
+  and Java code of its own. The standalone builder never adds the script
+  libraries by itself: tick them in *Standalone Settings*, with the LCB libraries they
+  need (for example `coinxt` with `org.openxtalk.library.coin`).
 - Both dictionaries have them: every public handler of their libraries
   has an entry in LiveCode's Dictionary, which reads it from the
   extension's source when the IDE loads the extension, and in the text
@@ -5151,8 +5269,8 @@ describes.
 | `engine/` | The engine: IDE ("development"), standalone, server and installer engines. |
 | `libfoundation/`, `libgraphics/`, `libscript/`, `libcore/`, `libbrowser/`, `libexternal*/` | Libraries the engine is built from. |
 | `rev*/` | Externals: database access (`revdb`), XML, zip, speech, PDF printing, browser and others. |
-| `toolchain/` | The LiveCode Builder compiler (`lc-compile`) and runner (`lc-run`). |
-| `extensions/` | Widgets and libraries written in LiveCode Builder, and script libraries. |
+| `toolchain/` | The xTalk Builder compiler (`lc-compile`) and runner (`lc-run`). |
+| `extensions/` | Widgets and libraries written in xTalk Builder, and script libraries. |
 | `ide/` | The IDE: OpenXTalk Lite 1.15's IDE, with its history from Terry Little's .91 onwards (see [HISTORY.md](HISTORY.md)), and OXT-Beyond's changes. `ide/Extensions/` holds the extensions the IDE ships but this repository does not build. |
 | `ide-support/` | Eleven IDE libraries kept in the engine repository (the standalone builder and others); they are installed into `Toolset/libraries`. |
 | `docs/` | Dictionary, guides and release note fragments from LiveCode Community; development notes in `docs/development/`. |
@@ -5162,7 +5280,7 @@ describes.
 | `tools/oxt/` | Python tools that map an installed OpenXTalk Lite folder to the repository and back (`layout.py`), stage OXT-Beyond's installed layout (`package.py`), fetch the external assets listed in `external-assets.json`, pin, fetch and build the xTalk Suite extensions listed in `xtalk-extensions.json` (`xtalk_extensions.py`), and write the text dictionary's entries (`text_dictionary.py`). See [tools/oxt/README.md](tools/oxt/README.md). |
 | `Installer/oxt-beyond/` | The Inno Setup script of the installer, the scripts that make its images, and the icon's source art. |
 | `tools/ci/` | PowerShell, Python and shell scripts used by CI to install components, build, generate the dictionary and the guides (`build_docs.sh`), check, package, smoke-test, compile-check the IDE, run the engine tests of `tests/` (and trace a Windows crash), build and test the installer, join and sign the macOS app, test the Linux package, and assemble a release and its notes. |
-| `.github/workflows/` | The GitHub Actions workflows: `build-windows.yml`, `build-macos.yml` and `build-linux.yml` build, package and test each platform on every push to `main` and every pull request into it; `docs.yml`, which each of them calls, generates the dictionary and the guides, and `web.yml`, which each of them calls too, builds the web runtime; `release.yml` builds all three from a `v` tag and publishes the release; `tag-release.yml` tags `main` and starts it; `runtimes.yml` makes the standalone runtimes asset; `media-check.yml` checks the browser and player in a published release. |
+| `.github/workflows/` | The GitHub Actions workflows: `build-windows.yml`, `build-macos.yml` and `build-linux.yml` build, package and test each platform on every push to `main` and every pull request into it; `docs.yml`, which each of them calls, generates the dictionary and the guides, and `web.yml`, which each of them calls too, builds the web runtime; `release.yml` builds all three from a `v` tag and publishes the release; `tag-release.yml` tags `main` and starts it; `runtimes.yml` makes the standalone runtimes asset; `web-prerelease.yml` publishes main's Stack Player between releases for the community gallery; `media-check.yml` checks the browser and player in a published release. |
 | `Installer/package.txt`, `builder/` | LiveCode's packaging manifest (the packager follows its rules for Windows, Linux and macOS) and LiveCode's build tools, whose docs builder makes the dictionary and the guides (its installer builder is not used). |
 | `tests/`, `engine/exec-tests/` and others | Upstream test suites; CI runs those of `tests/` (see [Engine tests](BUILDING.md#engine-tests)). |
 
@@ -5191,7 +5309,7 @@ Known limitations, in rough order of importance:
    9.6.3's until its **OXT-Beyond engine** box is ticked. The Android
    builder is tested automatically with each engine (packages built with
    a real Android SDK, checked, and run on Android 13 and 16 KB page
-   emulators), and the LiveCode Script tests run in an Android
+   emulators), and the xTalk Script tests run in an Android
    standalone with each. The Windows and Linux runtimes are built from
    this repository from 0.2.1-rc.3 on, and every package's tests build a
    standalone from each of them.
@@ -5328,8 +5446,8 @@ contributions are accepted under the same licence as the project. See
   basis of Quick Dictionary) and the FerrusLogic team (DevGuides).
 - **HyperXTalk** ([emily-elizabeth/HyperXTalk](https://github.com/emily-elizabeth/HyperXTalk)),
   Emily-Elizabeth Howard's GPL-3.0 fork of the same LiveCode Community
-  code, with docmeth02, Mark Wieder, Brian Milby, Paul McClernan, BerndN
-  and other contributors. Code taken from HyperXTalk
+  code, with docmeth02, Mark Wieder, Brian Milby, Paul McClernan, BerndN,
+  Stam Kapetanakis and other contributors. Code taken from HyperXTalk
   names the HyperXTalk commit and its author in the commit message.
 - **The people who report, test and suggest on the OpenXTalk forums.**
   Each fix their report led to names them in [CHANGELOG.md](CHANGELOG.md)

@@ -1,7 +1,9 @@
 ﻿script "revSEMenubarBehavior"
 -- Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
 -- (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
--- Tom Perry (2024-2026); its Git history and CHANGELOG.md say what changed.
+-- Seth Morrow (2026), Tom Perry (2024-2026), Emily-Elizabeth Howard (2026)
+-- and Stam Kapetanakis (2026); its Git history and CHANGELOG.md say what
+-- changed.
 
 # Description
 #   Sent by the parent when the menubar group may need to resize itself
@@ -156,7 +158,17 @@ private command buildEditMenu pContext
       put toggleMenuItem(tab & "Autocomplete", sePrefGet("editor,providercompletion")) & return after tEdit
    end if
    */
-   put toggleMenuItem(tab & "Autocomplete", sePrefGet("editor,providercompletion")) & return after tEdit
+   -- OXT-Beyond: the list of completions from HyperXTalk, off until this
+   -- is ticked (the item ticked "editor,providercompletion" before, which
+   -- had no list to show; the list asks for both, and ticking this item
+   -- sets both: see handleEditMenuPick)
+   put toggleMenuItem(tab & "Autocomplete", sePrefGet("editor,showautocomplete") is true) & return after tEdit
+   -- OXT-Beyond: whether an abbreviation finds a long name ("poc" finds
+   -- preOpenCard), from HyperXTalk #607; on unless it is unticked, and
+   -- greyed out while the list is off. (The tab, which puts the item in
+   -- the Options submenu, comes before the "(" that greys it out.)
+   put tab & enableMenuItem(toggleMenuItem("Match Abbreviations", sePrefGet("editor,autocompletehumps") is not false), \
+         sePrefGet("editor,showautocomplete") is true) & return after tEdit
    put toggleMenuItem(tab & "Autoformat", sePrefGet("editor,autoformat")) & return after tEdit
    
    put "-" & return & \
@@ -502,7 +514,19 @@ private command handleEditMenuPick pItemName
          sePrefSet "editor,autocomplete", (not sePrefGet("editor,autocomplete"))
          break
       case "Options|Autocomplete"
-         sePrefSet "editor,providercompletion", (not sePrefGet("editor,providercompletion"))
+         -- OXT-Beyond: the list of completions (see buildEditMenu). Ticking
+         -- it ticks the old item's preference too, which a user may have
+         -- unticked when it showed nothing, so that the list shows
+         if sePrefGet("editor,showautocomplete") is true then
+            sePrefSet "editor,showautocomplete", false
+         else
+            sePrefSet "editor,showautocomplete", true
+            sePrefSet "editor,providercompletion", true
+         end if
+         break
+      case "Options|Match Abbreviations"
+         -- OXT-Beyond: see buildEditMenu
+         sePrefSet "editor,autocompletehumps", (sePrefGet("editor,autocompletehumps") is false)
          break
       case "Options|Autoformat"
          sePrefSet "editor,autoformat", (not sePrefGet("editor,autoformat"))
