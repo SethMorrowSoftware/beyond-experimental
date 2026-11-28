@@ -2,8 +2,8 @@
 -- Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
 -- (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
 -- Seth Morrow (2026), Terry Little (2023), Tom Perry (2023-2026),
--- docmeth02 (2026) and Emily-Elizabeth Howard (2026); its Git history and
--- CHANGELOG.md say what changed.
+-- docmeth02 (2026), Emily-Elizabeth Howard (2026) and Stam Kapetanakis
+-- (2026); its Git history and CHANGELOG.md say what changed.
 
 /**
 Main IDE library providing functionality for palettes and other IDE add-ons.
@@ -4966,6 +4966,15 @@ on revIDESetPaletteRectPreference pStackName
    if the iconic of stack pStackName then
       exit revIDESetPaletteRectPreference
    end if
+   -- OXT-Beyond: nor for a stack named by a file in the temporary folder
+   -- (a stack with no name of its own takes its file's path as its name):
+   -- each one left a palette_rect_ preference of its own that nothing
+   -- would ever read again, and the preferences file grew with every run.
+   -- From Mark Wieder's HyperXTalk pull request #623, which skips names
+   -- that begin with /tmp; this skips any OS's temporary folder.
+   if revIDEStackNameIsTempPath(pStackName) then
+      exit revIDESetPaletteRectPreference
+   end if
    
    local tRect
    put the rect of stack pStackName into tRect
@@ -4994,6 +5003,63 @@ on revIDEClearPaletteRects
       end if
    end repeat
 end revIDEClearPaletteRects
+
+-- OXT-Beyond: whether pStackName is the path of a file in the temporary
+-- folder (/tmp, or the OS's own: specialFolderPath("temporary")), with
+-- either kind of slash. Spaces count as underscores, so a name read back
+-- from a palette_rect_ preference (revIDESetPaletteRectPreference makes
+-- them underscores) is recognised as well.
+function revIDEStackNameIsTempPath pStackName
+   local tName, tTemp, tTemps
+   put pStackName into tName
+   replace backslash with slash in tName
+   replace space with "_" in tName
+   put "/tmp/" into tTemps
+   put specialFolderPath("temporary") into tTemp
+   replace backslash with slash in tTemp
+   replace space with "_" in tTemp
+   if tTemp is not empty and tTemp is not slash then
+      if the last char of tTemp is not slash then
+         put slash after tTemp
+      end if
+      put return & tTemp after tTemps
+      -- (on macOS /var is a link to /private/var, and a path may be either)
+      if tTemp begins with "/var/" then
+         put return & "/private" & tTemp after tTemps
+      end if
+   end if
+   repeat for each line tTemp in tTemps
+      if tName begins with tTemp then
+         return true
+      end if
+   end repeat
+   return false
+end revIDEStackNameIsTempPath
+
+-- OXT-Beyond: takes out the palette_rect_ preferences that earlier
+-- versions stored for stacks named by a temporary file (see
+-- revIDESetPaletteRectPreference), once, as the IDE starts. Returns how
+-- many it took out; the preferences are saved only if it took any.
+function revIDEForgetTempPaletteRects
+   local tProps, tKey, tCount
+   put 0 into tCount
+   if there is not a stack "revPreferences" then
+      return tCount
+   end if
+   put the customProperties of stack "revPreferences" into tProps
+   repeat for each key tKey in tProps
+      if tKey begins with "palette_rect_" and \
+            revIDEStackNameIsTempPath(char (length("palette_rect_") + 1) to -1 of tKey) then
+         delete variable tProps[tKey]
+         add 1 to tCount
+      end if
+   end repeat
+   if tCount > 0 then
+      set the customProperties of stack "revPreferences" to tProps
+      revInternal__SavePreferences
+   end if
+   return tCount
+end revIDEForgetTempPaletteRects
 
 private function revIDEPaletteBarHeight pStackID
    return the effective height of pStackID - the height of pStackID
@@ -8661,10 +8727,13 @@ must be the bytes that the gallery's signed list names, and only the
 files it names are written, into a folder of their own. A copy the user
 has changed is never written over.
 
-The last dialog shows where the copy is, and opens it when asked: with
-the pointer tool, and without running any of its opening scripts. That
-is no promise about what the stack does once it is used; the dialog says
-that too.
+The last dialog shows where the copy is, and opens it when asked: Open It
+to Look opens it with the pointer tool, and without running any of its
+opening scripts. That is no promise about what the stack does once it is
+used; the dialog says that too. Open and Run opens it as File > Open
+does, with the browse tool, its opening scripts running: a stack that
+draws what it shows as it opens shows its cards bare when it is opened to
+look at (richmond62, openxtalk.org p=26654), and the dialog says that.
 
 The result is the path of the copy's main file, empty when the user
 chose not to, or "error: " and why there is no copy.
@@ -8736,17 +8805,19 @@ command revIDECommunityStacksGetCopy pEntry, pSite, pFolder
    put "emerald" into tSpec["tone"]
    put "It is in" && tFolder & ", and it is exactly the file that the gallery lists." & return & return & \
          "Open It to Look opens it with the pointer tool, the one for looking and changing, " & \
-         "and runs none of its opening scripts." into tSpec["text"]
+         "and runs none of its opening scripts, so a stack that draws its screen as it opens shows its cards bare." & return & return & \
+         "Open and Run opens it as File > Open does, with the browse tool: its opening scripts run, as your own stacks' do." into tSpec["text"]
    put "Once it is open it is a stack like any other of yours: its scripts run when you choose the browse tool and use it." into tSpec["callout"]
    put "note" into tSpec["calloutKind"]
-   put "Show the Folder" & return & "Done" & return & "Open It to Look" into tSpec["buttons"]
+   put "Show the Folder" & return & "Done" & return & "Open and Run" & return & "Open It to Look" into tSpec["buttons"]
    put "Done" into tSpec["cancel"]
    repeat
       if not revIDEKitDialog(tSpec, tChoice) then
          answer information "Your copy is ready:" && tResult & return & return & \
                "Open It to Look opens it with the pointer tool and runs none of its opening scripts. " & \
-               "Its scripts run once you choose the browse tool and use it." \
-               with "Show the Folder" or "Done" or "Open It to Look"
+               "Its scripts run once you choose the browse tool and use it. " & \
+               "Open and Run opens it as File > Open does, its opening scripts running." \
+               with "Show the Folder" or "Done" or "Open and Run" or "Open It to Look"
          put it into tChoice
       end if
       switch tChoice
@@ -8760,14 +8831,12 @@ command revIDECommunityStacksGetCopy pEntry, pSite, pFolder
             catch tError
                put "error: The copy could not be opened." into tOpened
             end try
-            if tOpened begins with "error:" then
-               __communityStacksSay "The copy was not opened", tFileName, word 2 to -1 of tOpened
-            else
-               try
-                  revIDEAddRecentStack tResult
-               catch tError
-               end try
-            end if
+            __communityStacksOpened tOpened, tResult, tFileName
+            exit repeat
+            break
+         case "Open and Run"
+            -- (sent, not called: see revIDECommunityStacksRunCopy)
+            send "revIDECommunityStacksRunCopy tResult, tFileName" to me in 0 milliseconds
             exit repeat
             break
          default
@@ -8776,6 +8845,54 @@ command revIDECommunityStacksGetCopy pEntry, pSite, pFolder
    end repeat
    return tResult
 end revIDECommunityStacksGetCopy
+
+/*
+Opens a copy of a stack of the Community Stacks to run it: Open and Run in
+the dialog after Get a Copy (revIDECommunityStacksGetCopy).
+
+pFile (string): The path of the copy's main file
+
+pFileName (string): Its name, as the dialog showed it
+
+Description:
+The copy opens as File > Open opens a stack, with the browse tool and its
+opening scripts running, unless it is one the IDE would take for a part
+of itself (revCommunityStacksOpenToRun says why, and the user is told).
+revIDECommunityStacksGetCopy sends this, and does not call it: what
+called that (the Community Stacks window's Get a Copy) waits with a try
+around it, and while a try is waiting the engine shows no error. So an
+error of the copy's own opening scripts would be lost there; here nothing
+waits under it, and the IDE shows it as it shows any stack's (Codex
+review of #617).
+
+References: revIDECommunityStacksGetCopy (command)
+
+Tags: ide
+*/
+command revIDECommunityStacksRunCopy pFile, pFileName
+   local tOpened
+   if revEnvironmentIsWeb() or pFile is empty then
+      exit revIDECommunityStacksRunCopy
+   end if
+   dispatch "revCommunityStacksOpenToRun" to stack __communityStacksFile() with pFile
+   put the result into tOpened
+   __communityStacksOpened tOpened, pFile, pFileName
+end revIDECommunityStacksRunCopy
+
+-- After a copy was opened (pOpened is empty), or was not (pOpened is
+-- "error: " and why): the copy's file pFile among the recent stacks, or
+-- the user told why it is not open
+private command __communityStacksOpened pOpened, pFile, pFileName
+   local tError
+   if pOpened begins with "error:" then
+      __communityStacksSay "The copy was not opened", pFileName, word 2 to -1 of pOpened
+   else
+      try
+         revIDEAddRecentStack pFile
+      catch tError
+      end try
+   end if
+end __communityStacksOpened
 
 /*
 Installs a script library of the Community Stacks' gallery, after asking
@@ -11246,7 +11363,16 @@ on ideStyleText pSelectedChunk, pSelectedObject, pIsField, pWhich, pValue
          
          if pWhich is "superscript" then put -4 into tTextShiftAmount
          else put 4 into tTextShiftAmount
-         if the textShift of tTarget is a number AND the textShift of tTarget is not 0 then 
+         -- OXT-Beyond: the item is a toggle of its own direction only.
+         -- Before, any shift at all made either item take the shift off,
+         -- so Subscript on superscript text (or the other way round) did
+         -- nothing that could be seen until it was chosen a second time,
+         -- in LiveCode Community too. Text shifted the item's way loses
+         -- its shift, as before; anything else gets the item's shift.
+         local tTextShiftNow
+         put the textShift of tTarget into tTextShiftNow
+         if tTextShiftNow is a number and \
+               ((tTextShiftNow < 0 and tTextShiftAmount < 0) or (tTextShiftNow > 0 and tTextShiftAmount > 0)) then
             put 0 into tTextShiftAmount
          end if
          
@@ -14405,13 +14531,21 @@ end revIDEGenerateDictionaryHTML
 local sNamesToColorsA, sColorsToNamesA
 
 private on __fetchNamesToColors
-   local tColorRGB
+   local tColorRGB, tSavedOverlay
    
+   -- OXT-Beyond: the engine turns colour names into RGB through the
+   -- templateGraphic's colorOverlay, which setting its color switches on.
+   -- It was left on, set to the last name in the list, so every graphic
+   -- made after the first call came out under a yellow-green overlay.
+   -- The template's own overlay (none, unless a script set one) is put
+   -- back. Found by Stam Kapetanakis (HyperXTalk pull request #620).
+   put the colorOverlay of the templateGraphic into tSavedOverlay
    repeat for each line tColorName in the colorNames
    	  set the colorOverlay["color"] of the templateGraphic to tColorName
    	  put the colorOverlay["color"] of the templateGraphic into tColorRGB
   		put tColorRGB into sNamesToColorsA[tColorName]
    end repeat
+   set the colorOverlay of the templateGraphic to tSavedOverlay
 end __fetchNamesToColors
 
 private on __fetchColorsToNames

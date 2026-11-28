@@ -71,6 +71,9 @@ along with OXT-Beyond.  If not see <http://www.gnu.org/licenses/>.  */
 #include "async.h"
 #include "async-core.h"
 
+#include <cstdlib>
+#include <cstring>
+
 #if defined(_ANDROID_MOBILE)
 #include "mblandroidjava.h"
 #endif
@@ -1320,6 +1323,38 @@ extern "C" MC_DLLEXPORT_DEF bool MCAsyncJobsCancel(MCValueRef p_job)
 	bool t_cancelled = MCAsyncCoreCancel(MCAsyncJobFromValue(p_job));
 	MCAsyncDrainIfWanted();
 	return t_cancelled;
+}
+
+/* A Background Workers worker asks to end as soon as the process that
+ * started it does, however that ends (see MCAsyncCoreEndWithParent). The
+ * number is a process's, read as a job's number is. */
+extern "C" MC_DLLEXPORT_DEF bool MCAsyncJobsEndWithParent(MCValueRef p_parent)
+{
+	MCAsyncJobId t_parent = MCAsyncJobFromValue(p_parent);
+	if (t_parent == 0)
+		return false;
+	return MCAsyncCoreEndWithParent(t_parent);
+}
+
+/* A worker of the Background Workers library is the engine started with
+ * OXT_WORKER set to 1 and OXT_WORKER_PARENT to the process that started
+ * it, and ends with that process from the start (X_open calls this),
+ * whether or not the worker loads the Background Jobs library, which a
+ * worker started from a stack on the desktop does not: asyncEndWithParent
+ * then never ran, and a busy worker outlived a stack that crashed or was
+ * killed. Nothing else sets the two, so no other engine notices. */
+void MCAsyncEndWithParentIfWorker(void)
+{
+	const char *t_worker = getenv("OXT_WORKER");
+	const char *t_parent = getenv("OXT_WORKER_PARENT");
+	if (t_worker == nullptr || strcmp(t_worker, "1") != 0 ||
+	    t_parent == nullptr || *t_parent == '\0')
+		return;
+	char *t_end = nullptr;
+	unsigned long long t_number = strtoull(t_parent, &t_end, 10);
+	if (t_end == t_parent || *t_end != '\0' || t_number == 0)
+		return;
+	MCAsyncCoreEndWithParent(static_cast<uint64_t>(t_number));
 }
 
 extern "C" MC_DLLEXPORT_DEF void MCAsyncJobsStatus(MCValueRef p_job, MCStringRef& r_status)

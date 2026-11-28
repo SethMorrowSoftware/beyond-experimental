@@ -200,6 +200,7 @@ REPO_BUILT_EXTENSIONS = (
     'org.openxtalk.library.androiddocuments',
     'org.openxtalk.library.async',
     'org.openxtalk.library.hxtcompat',
+    'org.openxtalk.widget.svgdrawing',
 )
 
 # The xTalk Suite extensions (class xtalk): their folders are the ones

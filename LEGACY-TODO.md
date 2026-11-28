@@ -55,7 +55,7 @@ Code its authors knew to be wrong or incomplete. 64 notes, by part of the reposi
 - [engine/src/funcs.h:1154](engine/src/funcs.h#L1154) EE_NUMTOCHAR_BADSOURCE, PE_NUMTOCHAR_BADPARAM> // FIXME
 - [engine/src/funcs.h:1162](engine/src/funcs.h#L1162) EE_NUMTOCHAR_BADSOURCE, PE_NUMTOCHAR_BADPARAM> // FIXME
 - [engine/src/funcs.h:1595](engine/src/funcs.h#L1595) EE_CHARTONUM_BADSOURCE, PE_CHARTONUM_BADPARAM> // FIXME
-- [engine/src/globals.cpp:991](engine/src/globals.cpp#L991) FIXME use MCProperListRef
+- [engine/src/globals.cpp:993](engine/src/globals.cpp#L993) FIXME use MCProperListRef
 - [engine/src/mcsemaphore.h:61](engine/src/mcsemaphore.h#L61) FIXME mark as explicit
 - [engine/src/sysspec-url.cpp:345](engine/src/sysspec-url.cpp#L345) FIXME if wait() returns non-zero, cancel the URL
 - [engine/src/widget.lcb:922](engine/src/widget.lcb#L922) FIXME not actually implemented
@@ -67,7 +67,7 @@ Code its authors knew to be wrong or incomplete. 64 notes, by part of the reposi
 
 - [libfoundation/include/system-commandline.h:81](libfoundation/include/system-commandline.h#L81) FIXME support for getting the command filename isn't implemented
 - [libfoundation/src/foundation-handler.cpp:656](libfoundation/src/foundation-handler.cpp#L656) FIXME Should include information about arguments and return
-- [libfoundation/src/foundation-private.h:710](libfoundation/src/foundation-private.h#L710) define __MCAssertIsLocale(x)   MCAssert(nil != (x)) /* FIXME
+- [libfoundation/src/foundation-private.h:723](libfoundation/src/foundation-private.h#L723) define __MCAssertIsLocale(x)   MCAssert(nil != (x)) /* FIXME
 - [libfoundation/src/system-commandline.cpp:284](libfoundation/src/system-commandline.cpp#L284) return false; /* FIXME proper error
 - [libfoundation/src/system-file-w32.cpp:290](libfoundation/src/system-file-w32.cpp#L290) FIXME Remaining weaknesses:
 - [libfoundation/src/system-file-w32.cpp:488](libfoundation/src/system-file-w32.cpp#L488) FIXME[2017-04-20] there should be a "basename" function
@@ -81,7 +81,7 @@ Code its authors knew to be wrong or incomplete. 64 notes, by part of the reposi
 ### FIXME: tests (8)
 
 - [tests/_testerlib.livecodescript:272](tests/_testerlib.livecodescript#L272) FIXME this really doesn't work properly if LiveCode's stdout
-- [tests/_testrunner.lcb:69](tests/_testrunner.lcb#L69) FIXME this should use proper LiveCode builder syntax for string
+- [tests/_testrunner.lcb:69](tests/_testrunner.lcb#L69) FIXME this should use proper xTalk Builder syntax for string
 - [tests/_testrunner.lcb:211](tests/_testrunner.lcb#L211) FIXME HACK HACK HACK
 - [tests/_testrunner.lcb:234](tests/_testrunner.lcb#L234) FIXME Currently, this is implemented by redirecting the lc-run's
 - [tests/_testrunner.lcb:262](tests/_testrunner.lcb#L262) FIXME Currently, this is implemented by redirecting the lc-run's
@@ -124,7 +124,7 @@ Code its authors knew to be wrong or incomplete. 64 notes, by part of the reposi
 
 ### FIXME: ide (1)
 
-- [ide/Toolset/libraries/revidelibrary.8.livecodescript:13970](ide/Toolset/libraries/revidelibrary.8.livecodescript#L13970) FIXME There is some inconsistency in the guide's files that we
+- [ide/Toolset/libraries/revidelibrary.8.livecodescript:14096](ide/Toolset/libraries/revidelibrary.8.livecodescript#L14096) FIXME There is some inconsistency in the guide's files that we
 
 <a id="fixme-ide-support"></a>
 
@@ -156,11 +156,11 @@ Workarounds their authors were not happy with. 32 notes, by part of the reposito
 ### HACK: ide (8)
 
 - [ide/Toolset/libraries/revdebuggerlibrary.livecodescript:1442](ide/Toolset/libraries/revdebuggerlibrary.livecodescript#L1442) For now we have to hack this without access to the parser
-- [ide/Toolset/libraries/revdebuggerlibrary.livecodescript:2273](ide/Toolset/libraries/revdebuggerlibrary.livecodescript#L2273) calls IDE code, e.g get url. For now we hack around this.
+- [ide/Toolset/libraries/revdebuggerlibrary.livecodescript:2295](ide/Toolset/libraries/revdebuggerlibrary.livecodescript#L2295) calls IDE code, e.g get url. For now we hack around this.
 - [ide/Toolset/palettes/behaviors/revinspectorbehavior.livecodescript:47](ide/Toolset/palettes/behaviors/revinspectorbehavior.livecodescript#L47) HACK for stopping the gradient and effects palette getting stuck behind the inspector!!
 - [ide/Toolset/palettes/extension manager/revideextensionmanagerstorebehavior.livecodescript:29](ide/Toolset/palettes/extension%20manager/revideextensionmanagerstorebehavior.livecodescript#L29) Hack to get round bug 18946
 - [ide/Toolset/palettes/reverrordisplay.livecodescript:576](ide/Toolset/palettes/reverrordisplay.livecodescript#L576) attempting to highlight the appropriate line number. This is a total hack, but there doensn't seem
-- [ide/Toolset/palettes/script editor/behaviors/revsecommoneditorbehavior.livecodescript:3610](ide/Toolset/palettes/script%20editor/behaviors/revsecommoneditorbehavior.livecodescript#L3610) First wrap the script to the required width, this is a total hack as doing it properly would take quite a while.
+- [ide/Toolset/palettes/script editor/behaviors/revsecommoneditorbehavior.livecodescript:3710](ide/Toolset/palettes/script%20editor/behaviors/revsecommoneditorbehavior.livecodescript#L3710) First wrap the script to the required width, this is a total hack as doing it properly would take quite a while.
 - [ide/Toolset/palettes/script editor/behaviors/revseeditorbehavior.livecodescript:2259](ide/Toolset/palettes/script%20editor/behaviors/revseeditorbehavior.livecodescript#L2259) this is clearly a bit of a hack, but hopefully doing is this way will minimize the risk.
 - [ide/Toolset/palettes/script editor/behaviors/revsevariablespanebehavior.livecodescript:116](ide/Toolset/palettes/script%20editor/behaviors/revsevariablespanebehavior.livecodescript#L116) If the user chooses a large font, we need to increase the size of the template, for now we just hack this as
 
@@ -213,7 +213,7 @@ Workarounds their authors were not happy with. 32 notes, by part of the reposito
 
 ### HACK: extensions (1)
 
-- [extensions/extensions.gyp:211](extensions/extensions.gyp#L211) hack because gyp wants an output
+- [extensions/extensions.gyp:213](extensions/extensions.gyp#L213) hack because gyp wants an output
 
 ## TODO
 
@@ -233,7 +233,7 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/exec-tests/text/EvalFontNames.test:11](engine/exec-tests/text/EvalFontNames.test#L11) TODO - check for standard fonts on other platforms
 - [engine/exec-tests/text/EvalFontSizes.test:10](engine/exec-tests/text/EvalFontSizes.test#L10) TODO - test font sizes on other platforms
 - [engine/exec-tests/text/EvalFontStyles.test:8](engine/exec-tests/text/EvalFontStyles.test#L8) TODO - test font sizes on other platforms
-- [engine/src/block.cpp:2368](engine/src/block.cpp#L2368) else if (!IsMacLF()) // TODO: if platform reverses selected text
+- [engine/src/block.cpp:2377](engine/src/block.cpp#L2377) else if (!IsMacLF()) // TODO: if platform reverses selected text
 - [engine/src/browser.lcb:221](engine/src/browser.lcb#L221) TODO - replace literal values with constants when possible
 - [engine/src/browser.lcb:240](engine/src/browser.lcb#L240) TODO - replace literal values with constants when possible
 - [engine/src/browser.lcb:244](engine/src/browser.lcb#L244) TODO - replace literal values with constants when possible
@@ -250,7 +250,7 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/desktop-dc.cpp:275](engine/src/desktop-dc.cpp#L275) COCOA-TODO: These values should be queryable (once we figure out what
 - [engine/src/desktop-menu.cpp:128](engine/src/desktop-menu.cpp#L128) COCOA-TODO: Will require some restructuring in the engine menu code to support unicode
 - [engine/src/desktop-stack.cpp:101](engine/src/desktop-stack.cpp#L101) \|\| mode == WM_DRAWER)  // COCOA-TODO: Implement drawers
-- [engine/src/desktop-stack.cpp:267](engine/src/desktop-stack.cpp#L267) COCOA-TODO: Make sure contained views also scroll (?)
+- [engine/src/desktop-stack.cpp:269](engine/src/desktop-stack.cpp#L269) COCOA-TODO: Make sure contained views also scroll (?)
 - [engine/src/desktop.cpp:112](engine/src/desktop.cpp#L112) TODO[2017-04-05] X_init() failed before initialising global
 - [engine/src/desktop.cpp:664](engine/src/desktop.cpp#L664) PLATFORM-TODO: Should we do more than this? i.e. Should the dragDrop
 - [engine/src/dispatch.cpp:260](engine/src/dispatch.cpp#L260) TODO[19681]: This can be removed when all engine messages are sent with
@@ -262,16 +262,16 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/dskmac.cpp:1296](engine/src/dskmac.cpp#L1296) TODO assign relevant error code
 - [engine/src/dskmac.cpp:1341](engine/src/dskmac.cpp#L1341) void MCS_mac_closeresourcefile(ResFileRefNum p_ref) // TODO: remove?
 - [engine/src/dskmac.cpp:1761](engine/src/dskmac.cpp#L1761) TODO Add MCSystemFileHandle::SetStream(char *newptr) ?
-- [engine/src/dskmac.cpp:3577](engine/src/dskmac.cpp#L3577) TODO: Report errno appropriately.
+- [engine/src/dskmac.cpp:3600](engine/src/dskmac.cpp#L3600) TODO: Report errno appropriately.
 - [engine/src/dskmain.cpp:227](engine/src/dskmain.cpp#L227) TODO Remove -g,-geometry flag because it's not used any more
-- [engine/src/dskw32.cpp:628](engine/src/dskw32.cpp#L628) TODO: still necessary with GetFileAttributes instead of stat?
-- [engine/src/dskw32.cpp:638](engine/src/dskw32.cpp#L638) TODO: still necessary with GetFileAttributes instead of stat?
+- [engine/src/dskw32.cpp:631](engine/src/dskw32.cpp#L631) TODO: still necessary with GetFileAttributes instead of stat?
+- [engine/src/dskw32.cpp:641](engine/src/dskw32.cpp#L641) TODO: still necessary with GetFileAttributes instead of stat?
 - [engine/src/em-dc.js:242](engine/src/em-dc.js#L242) TODO - handle cleanup of embedded canvas
 - [engine/src/em-event.js:1012](engine/src/em-event.js#L1012) TODO - reenable alt key detection
 - [engine/src/em-util.js:308](engine/src/em-util.js#L308) TODO - support more value types
 - [engine/src/em-util.js:336](engine/src/em-util.js#L336) TODO - for now, treat functions as objects but we may wish to differentiate them later
 - [engine/src/exec-engine.cpp:523](engine/src/exec-engine.cpp#L523) TODO - create as list?
-- [engine/src/exec-extension.cpp:765](engine/src/exec-extension.cpp#L765) TODO: Augment error
+- [engine/src/exec-extension.cpp:781](engine/src/exec-extension.cpp#L781) TODO: Augment error
 - [engine/src/exec-interface-stack.cpp:125](engine/src/exec-interface-stack.cpp#L125) TODO
 - [engine/src/exec-network.cpp:180](engine/src/exec-network.cpp#L180) TODO - I.M. this is a bit odd, checking if we have permission to resolve a hostname AFTER we've
 - [engine/src/exec-pasteboard.cpp:556](engine/src/exec-pasteboard.cpp#L556) TODO: support multiple items
@@ -281,8 +281,8 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/externalv1.h:221](engine/src/externalv1.h#L221) V6-TODO: Make sure these return the same as they did in previous versions - i.e. native char
 - [engine/src/externalv1.h:360](engine/src/externalv1.h#L360) V6-TODO: This method was never exposed / used so is now unimplemented.
 - [engine/src/externalv1.h:363](engine/src/externalv1.h#L363) V6-TODO: These methods are not valid for V6, the array interface needs rethinking at a later
-- [engine/src/fieldh.cpp:443](engine/src/fieldh.cpp#L443) TODO: TextIsExplicitLineBreak
-- [engine/src/fieldh.cpp:510](engine/src/fieldh.cpp#L510) TODO: the kMCFieldExportEvent{Unicode,Native}Run constants should be merged
+- [engine/src/fieldh.cpp:448](engine/src/fieldh.cpp#L448) TODO: TextIsExplicitLineBreak
+- [engine/src/fieldh.cpp:515](engine/src/fieldh.cpp#L515) TODO: the kMCFieldExportEvent{Unicode,Native}Run constants should be merged
 - [engine/src/fieldrtf.cpp:566](engine/src/fieldrtf.cpp#L566) TODO: paragraph metadata roundtrip - this clause breaks things at the moment :(
 - [engine/src/fields.cpp:281](engine/src/fields.cpp#L281) TODO: this will become useful again for surrogate pairs
 - [engine/src/graphicscontext.cpp:561](engine/src/graphicscontext.cpp#L561) TODO
@@ -314,18 +314,18 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/lnxdcs.cpp:289](engine/src/lnxdcs.cpp#L289) TODO: equivalent in GDK?
 - [engine/src/lnxdcs.cpp:583](engine/src/lnxdcs.cpp#L583) TODO - We may need to do clipboard persistance here
 - [engine/src/lnxflst.cpp:47](engine/src/lnxflst.cpp#L47) TODO: We need to revise the situation periodically and implement
-- [engine/src/lnxstack.cpp:301](engine/src/lnxstack.cpp#L301) TODO: initial input focus
-- [engine/src/lnxstack.cpp:353](engine/src/lnxstack.cpp#L353) TODO: is this just another way of ensuring on-top-ness?
-- [engine/src/lnxstack.cpp:375](engine/src/lnxstack.cpp#L375) TODO: input modality hints
-- [engine/src/lnxstack.cpp:453](engine/src/lnxstack.cpp#L453) TODO: test if this comment is still true
+- [engine/src/lnxstack.cpp:304](engine/src/lnxstack.cpp#L304) TODO: initial input focus
+- [engine/src/lnxstack.cpp:356](engine/src/lnxstack.cpp#L356) TODO: is this just another way of ensuring on-top-ness?
+- [engine/src/lnxstack.cpp:378](engine/src/lnxstack.cpp#L378) TODO: input modality hints
+- [engine/src/lnxstack.cpp:456](engine/src/lnxstack.cpp#L456) TODO: test if this comment is still true
 - [engine/src/mac-av-player.mm:1556](engine/src/mac-av-player.mm#L1556) TODO: Add more types??
 - [engine/src/mac-av-player.mm:1605](engine/src/mac-av-player.mm#L1605) TODO
 - [engine/src/mac-core.mm:1688](engine/src/mac-core.mm#L1688) 0x47 */ kMCPlatformKeyCodeNumLock, // COCO-TODO: This should be keypad-clear - double-check!
 - [engine/src/mac-core.mm:1755](engine/src/mac-core.mm#L1755) PLATFORM-TODO: Shifted keysym handling should be in the engine rather than
 - [engine/src/mac-core.mm:1828](engine/src/mac-core.mm#L1828) COCOA-TODO: Clean up this external dependency.
 - [engine/src/mac-core.mm:2350](engine/src/mac-core.mm#L2350) COCOA-TODO: Abstract Command/Control switching.
-- [engine/src/mac-core.mm:2425](engine/src/mac-core.mm#L2425) COCOA-TODO: Make this is a little more discerning (only need to reset if
-- [engine/src/mac-menu.mm:1891](engine/src/mac-menu.mm#L1891) COCOA-TODO: Abstract Command/Control switching.
+- [engine/src/mac-core.mm:2458](engine/src/mac-core.mm#L2458) COCOA-TODO: Make this is a little more discerning (only need to reset if
+- [engine/src/mac-menu.mm:1921](engine/src/mac-menu.mm#L1921) COCOA-TODO: Abstract Command/Control switching.
 - [engine/src/mac-surface.mm:34](engine/src/mac-surface.mm#L34) COCOA-TODO: Clean up external linkage for surface.
 - [engine/src/mac-surface.mm:219](engine/src/mac-surface.mm#L219) COCOA-TODO: Getting the height to flip round is dependent on a friend.
 - [engine/src/mac-surface.mm:261](engine/src/mac-surface.mm#L261) COCOA-TODO: Getting the height to flip round is dependent on a friend.
@@ -357,8 +357,8 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/mblandroidmisc.cpp:1405](engine/src/mblandroidmisc.cpp#L1405) TODO: doing this properly requires a JNI call
 - [engine/src/mblandroidstore.cpp:468](engine/src/mblandroidstore.cpp#L468) TODO - handle errors
 - [engine/src/mblandroidstore.cpp:580](engine/src/mblandroidstore.cpp#L580) TODO - handle errors
-- [engine/src/mcio.cpp:77](engine/src/mcio.cpp#L77) TODO - update processes to use MCNameRef
-- [engine/src/mcio.cpp:449](engine/src/mcio.cpp#L449) TODO[2017-02-06] Refactor so that this doesn't allocate any
+- [engine/src/mcio.cpp:81](engine/src/mcio.cpp#L81) TODO - update processes to use MCNameRef
+- [engine/src/mcio.cpp:462](engine/src/mcio.cpp#L462) TODO[2017-02-06] Refactor so that this doesn't allocate any
 - [engine/src/mixin-refcounted.h:54](engine/src/mixin-refcounted.h#L54) TODO: atomic ops
 - [engine/src/mixin-refcounted.h:62](engine/src/mixin-refcounted.h#L62) TODO: atomic ops
 - [engine/src/mixin-refcounted.h:70](engine/src/mixin-refcounted.h#L70) TODO: atomic ops
@@ -395,20 +395,20 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/module-engine.cpp:531](engine/src/module-engine.cpp#L531) TODO[C++11] This should be "static" but MSVC2010 doesn't support
 - [engine/src/object.cpp:683](engine/src/object.cpp#L683) TODO: filter out the C1 control codes too
 - [engine/src/object.cpp:1142](engine/src/object.cpp#L1142) TODO[19681]: This can be removed when all engine messages are sent with
-- [engine/src/object.h:1769](engine/src/object.h#L1769) TODO[C++11] uint32_t m_part_id = 0;
-- [engine/src/object.h:1772](engine/src/object.h#L1772) TODO[2017-04-27] These constructors should be constexpr
-- [engine/src/object.h:1773](engine/src/object.h#L1773) TODO[C++11] constexpr MCObjectPartHandle() = default;
-- [engine/src/object.h:1778](engine/src/object.h#L1778) TODO[C++11] MCObjectPartHandle(const MCObjectPartHandle&) = default;
-- [engine/src/object.h:1781](engine/src/object.h#L1781) TODO[C++11] MCObjectPartHandle(MCObjectPartHandle&& other) = deafult;
-- [engine/src/object.h:1792](engine/src/object.h#L1792) TODO[C++11] MCObjectPartHandle& operator=(const MCObjectPartHandle&) = default;
-- [engine/src/object.h:1799](engine/src/object.h#L1799) TODO[C++11] MCObjectPartHandle& operator=(MCObjectPartHandle&&) = default;
+- [engine/src/object.h:1779](engine/src/object.h#L1779) TODO[C++11] uint32_t m_part_id = 0;
+- [engine/src/object.h:1782](engine/src/object.h#L1782) TODO[2017-04-27] These constructors should be constexpr
+- [engine/src/object.h:1783](engine/src/object.h#L1783) TODO[C++11] constexpr MCObjectPartHandle() = default;
+- [engine/src/object.h:1788](engine/src/object.h#L1788) TODO[C++11] MCObjectPartHandle(const MCObjectPartHandle&) = default;
+- [engine/src/object.h:1791](engine/src/object.h#L1791) TODO[C++11] MCObjectPartHandle(MCObjectPartHandle&& other) = deafult;
+- [engine/src/object.h:1802](engine/src/object.h#L1802) TODO[C++11] MCObjectPartHandle& operator=(const MCObjectPartHandle&) = default;
+- [engine/src/object.h:1809](engine/src/object.h#L1809) TODO[C++11] MCObjectPartHandle& operator=(MCObjectPartHandle&&) = default;
 - [engine/src/paragraf.cpp:172](engine/src/paragraf.cpp#L172) TODO: trunctation
-- [engine/src/paragraf.cpp:2247](engine/src/paragraf.cpp#L2247) TODO: truncation if the paragraph would be too long
-- [engine/src/paragraf.cpp:2405](engine/src/paragraf.cpp#L2405) TODO: find out if ICU break iterator makes this redundant
-- [engine/src/paragraf.cpp:2421](engine/src/paragraf.cpp#L2421) TODO: find out if ICU break iterator makes this redundant
-- [engine/src/paragraf.cpp:2598](engine/src/paragraf.cpp#L2598) TODO: is this necessary with the ICU break iterator?
-- [engine/src/paragraf.cpp:2616](engine/src/paragraf.cpp#L2616) TODO: is this necessary with the ICU break iterator?
-- [engine/src/paragraf.h:885](engine/src/paragraf.h#L885) TODO: this should probably return a StringRef or a codepoint...
+- [engine/src/paragraf.cpp:2267](engine/src/paragraf.cpp#L2267) TODO: truncation if the paragraph would be too long
+- [engine/src/paragraf.cpp:2425](engine/src/paragraf.cpp#L2425) TODO: find out if ICU break iterator makes this redundant
+- [engine/src/paragraf.cpp:2441](engine/src/paragraf.cpp#L2441) TODO: find out if ICU break iterator makes this redundant
+- [engine/src/paragraf.cpp:2618](engine/src/paragraf.cpp#L2618) TODO: is this necessary with the ICU break iterator?
+- [engine/src/paragraf.cpp:2636](engine/src/paragraf.cpp#L2636) TODO: is this necessary with the ICU break iterator?
+- [engine/src/paragraf.h:889](engine/src/paragraf.h#L889) TODO: this should probably return a StringRef or a codepoint...
 - [engine/src/platform-recorder.cpp:50](engine/src/platform-recorder.cpp#L50) TODO - compression
 - [engine/src/platform.h:35](engine/src/platform.h#L35) COCOA-TODO: Remove external declaration.
 - [engine/src/platform.h:460](engine/src/platform.h#L460) COCOA-TODO: Do these key codes need to be mapped?
@@ -437,7 +437,7 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/sysdefs.h:1387](engine/src/sysdefs.h#L1387) TODO[C++11] uint32_t part_id = 0;
 - [engine/src/sysdefs.h:1391](engine/src/sysdefs.h#L1391) TODO[C++11] constexpr MCObjectPtr() = default;
 - [engine/src/sysdefs.h:1393](engine/src/sysdefs.h#L1393) TODO[C++11] constexpr
-- [engine/src/sysspec.cpp:1737](engine/src/sysspec.cpp#L1737) TODO Change to MCDataRef or change Shell to MCStringRef
+- [engine/src/sysspec.cpp:1818](engine/src/sysspec.cpp#L1818) TODO Change to MCDataRef or change Shell to MCStringRef
 - [engine/src/text-line.cpp:322](engine/src/text-line.cpp#L322) TODO: implement
 - [engine/src/text-pane.cpp:190](engine/src/text-pane.cpp#L190) TODO: examine the list of blocks in the paragraph for paragraph breaks
 - [engine/src/text-paragraph.cpp:547](engine/src/text-paragraph.cpp#L547) TODO: margins, padding, etc
@@ -461,8 +461,8 @@ Work left for later. 434 notes, by part of the repository:
 - [engine/src/w32dcw32.cpp:1122](engine/src/w32dcw32.cpp#L1122) TODO: pay attention to the CS_INSERTCHAR and CS_NOMOVECARET flags
 - [engine/src/w32dcw32.cpp:1504](engine/src/w32dcw32.cpp#L1504) TODO - look in to this further:
 - [engine/src/w32printer.cpp:543](engine/src/w32printer.cpp#L543) TODO - fix half pixels lost when insetting by odd integers
-- [engine/src/w32stack.cpp:555](engine/src/w32stack.cpp#L555) TODO - Windows 8 implementation will require getting the appropriate per-window value
-- [engine/src/w32stack.cpp:1236](engine/src/w32stack.cpp#L1236) TODO - Windows 8.1 per-monitor DPI-awareness may require the update region be in logical coords
+- [engine/src/w32stack.cpp:560](engine/src/w32stack.cpp#L560) TODO - Windows 8 implementation will require getting the appropriate per-window value
+- [engine/src/w32stack.cpp:1241](engine/src/w32stack.cpp#L1241) TODO - Windows 8.1 per-monitor DPI-awareness may require the update region be in logical coords
 - [engine/src/widget-events.cpp:190](engine/src/widget-events.cpp#L190) WIDGET-TODO: Reinstate FocusEnter
 - [engine/src/widget-events.cpp:202](engine/src/widget-events.cpp#L202) WIDGET-TODO: Reinstate FocusLeave
 - [engine/src/widget-events.cpp:206](engine/src/widget-events.cpp#L206) TODO: does the unfocus *always* happen before the next focus?
@@ -501,7 +501,7 @@ Work left for later. 434 notes, by part of the repository:
 - [libfoundation/include/foundation-span.h:456](libfoundation/include/foundation-span.h#L456) TODO[C++11] Enable this assertion once all our C++ compilers support it.
 - [libfoundation/include/foundation.h:793](libfoundation/include/foundation.h#L793) TODO: re-write when we adopt C++11
 - [libfoundation/include/foundation.h:801](libfoundation/include/foundation.h#L801) TODO: re-write when we adopt C++11
-- [libfoundation/src/foundation-array.cpp:937](libfoundation/src/foundation-array.cpp#L937) if defined(__ARM__) && 0 // TODO
+- [libfoundation/src/foundation-array.cpp:1045](libfoundation/src/foundation-array.cpp#L1045) if defined(__ARM__) && 0 // TODO
 - [libfoundation/src/foundation-bidi.cpp:399](libfoundation/src/foundation-bidi.cpp#L399) TODO
 - [libfoundation/src/foundation-data.cpp:894](libfoundation/src/foundation-data.cpp#L894) TODO: Shrink the buffer if its too big.
 - [libfoundation/src/foundation-foreign.cpp:967](libfoundation/src/foundation-foreign.cpp#L967) TODO[C++17] Some of the fields in here are left empty, and
@@ -519,7 +519,7 @@ Work left for later. 434 notes, by part of the repository:
 - [libfoundation/src/foundation-pickle.cpp:294](libfoundation/src/foundation-pickle.cpp#L294) r_value = MCValueRetain(kMCMinusOne); // TODO - this needs to be real minus one
 - [libfoundation/src/foundation-pickle.cpp:626](libfoundation/src/foundation-pickle.cpp#L626) TODO: Write out record typeinfo.
 - [libfoundation/src/foundation-pickle.cpp:642](libfoundation/src/foundation-pickle.cpp#L642) TODO: Write out error typeinfo.
-- [libfoundation/src/foundation-private.h:727](libfoundation/src/foundation-private.h#L727) TODO[C++11] Obsolete this macro by using std::reverse from
+- [libfoundation/src/foundation-private.h:740](libfoundation/src/foundation-private.h#L740) TODO[C++11] Obsolete this macro by using std::reverse from
 - [libfoundation/src/foundation-string.cpp:1538](libfoundation/src/foundation-string.cpp#L1538) TODO[2017-03-29] This could be optimised by _not_ copying the
 - [libfoundation/src/foundation-string.cpp:3674](libfoundation/src/foundation-string.cpp#L3674) TODO: Implement properly, based on properties of the needle string.
 - [libfoundation/src/foundation-string.cpp:6087](libfoundation/src/foundation-string.cpp#L6087) TODO: Shrink the buffer if its too big.
@@ -542,23 +542,23 @@ Work left for later. 434 notes, by part of the repository:
 
 ### TODO: revbrowser (19)
 
-- [revbrowser/src/cefbrowser.cpp:1010](revbrowser/src/cefbrowser.cpp#L1010) TODO - Load error handling
-- [revbrowser/src/cefbrowser.cpp:1337](revbrowser/src/cefbrowser.cpp#L1337) TODO - implement advanced event messages
-- [revbrowser/src/cefbrowser.cpp:1373](revbrowser/src/cefbrowser.cpp#L1373) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1378](revbrowser/src/cefbrowser.cpp#L1378) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1384](revbrowser/src/cefbrowser.cpp#L1384) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1475](revbrowser/src/cefbrowser.cpp#L1475) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1481](revbrowser/src/cefbrowser.cpp#L1481) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1486](revbrowser/src/cefbrowser.cpp#L1486) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1492](revbrowser/src/cefbrowser.cpp#L1492) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1648](revbrowser/src/cefbrowser.cpp#L1648) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1707](revbrowser/src/cefbrowser.cpp#L1707) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1843](revbrowser/src/cefbrowser.cpp#L1843) TODO - get result of search
-- [revbrowser/src/cefbrowser.cpp:1887](revbrowser/src/cefbrowser.cpp#L1887) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1892](revbrowser/src/cefbrowser.cpp#L1892) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1912](revbrowser/src/cefbrowser.cpp#L1912) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1917](revbrowser/src/cefbrowser.cpp#L1917) TODO - IMPLEMENT
-- [revbrowser/src/cefbrowser.cpp:1922](revbrowser/src/cefbrowser.cpp#L1922) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1023](revbrowser/src/cefbrowser.cpp#L1023) TODO - Load error handling
+- [revbrowser/src/cefbrowser.cpp:1350](revbrowser/src/cefbrowser.cpp#L1350) TODO - implement advanced event messages
+- [revbrowser/src/cefbrowser.cpp:1386](revbrowser/src/cefbrowser.cpp#L1386) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1391](revbrowser/src/cefbrowser.cpp#L1391) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1397](revbrowser/src/cefbrowser.cpp#L1397) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1488](revbrowser/src/cefbrowser.cpp#L1488) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1494](revbrowser/src/cefbrowser.cpp#L1494) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1499](revbrowser/src/cefbrowser.cpp#L1499) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1505](revbrowser/src/cefbrowser.cpp#L1505) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1661](revbrowser/src/cefbrowser.cpp#L1661) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1720](revbrowser/src/cefbrowser.cpp#L1720) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1856](revbrowser/src/cefbrowser.cpp#L1856) TODO - get result of search
+- [revbrowser/src/cefbrowser.cpp:1900](revbrowser/src/cefbrowser.cpp#L1900) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1905](revbrowser/src/cefbrowser.cpp#L1905) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1925](revbrowser/src/cefbrowser.cpp#L1925) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1930](revbrowser/src/cefbrowser.cpp#L1930) TODO - IMPLEMENT
+- [revbrowser/src/cefbrowser.cpp:1935](revbrowser/src/cefbrowser.cpp#L1935) TODO - IMPLEMENT
 - [revbrowser/src/cefbrowser_lnx.cpp:190](revbrowser/src/cefbrowser_lnx.cpp#L190) TODO - implement
 - [revbrowser/src/cefprocess.cpp:166](revbrowser/src/cefprocess.cpp#L166) TODO - IMPLEMENT
 
@@ -640,9 +640,9 @@ Work left for later. 434 notes, by part of the repository:
 
 - [libbrowser/src/libbrowser_android.cpp:601](libbrowser/src/libbrowser_android.cpp#L601) TODO - implement (not needed when used with native layers)
 - [libbrowser/src/libbrowser_android.cpp:607](libbrowser/src/libbrowser_android.cpp#L607) TODO - implement (not needed when used with native layers)
-- [libbrowser/src/libbrowser_cef.cpp:508](libbrowser/src/libbrowser_cef.cpp#L508) TODO[Bug 19381] On Linux and Windows, the in-git-checkout
-- [libbrowser/src/libbrowser_cef.cpp:1324](libbrowser/src/libbrowser_cef.cpp#L1324) TODO - Implement OnDownload callback
-- [libbrowser/src/libbrowser_cef.cpp:2098](libbrowser/src/libbrowser_cef.cpp#L2098) TODO - IMPLEMENT
+- [libbrowser/src/libbrowser_cef.cpp:511](libbrowser/src/libbrowser_cef.cpp#L511) TODO[Bug 19381] On Linux and Windows, the in-git-checkout
+- [libbrowser/src/libbrowser_cef.cpp:1337](libbrowser/src/libbrowser_cef.cpp#L1337) TODO - Implement OnDownload callback
+- [libbrowser/src/libbrowser_cef.cpp:2111](libbrowser/src/libbrowser_cef.cpp#L2111) TODO - IMPLEMENT
 - [libbrowser/src/libbrowser_cef_lnx.cpp:226](libbrowser/src/libbrowser_cef_lnx.cpp#L226) TODO - implement
 - [libbrowser/src/libbrowser_cef_lnx.cpp:233](libbrowser/src/libbrowser_cef_lnx.cpp#L233) TODO - implement
 - [libbrowser/src/libbrowser_cef_lnx.cpp:240](libbrowser/src/libbrowser_cef_lnx.cpp#L240) TODO - implement

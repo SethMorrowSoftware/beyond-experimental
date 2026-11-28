@@ -29,6 +29,10 @@ along with OXT-Beyond.  If not see <http://www.gnu.org/licenses/>.  */
  * nothing if no job was ever started. */
 void MCAsyncFinalize(void);
 
+/* At the engine's start: a Background Workers worker ends with the process
+ * that started it (async.cpp) */
+void MCAsyncEndWithParentIfWorker(void);
+
 /* What the jobs have ended with becomes pending messages, due at p_time.
  * MCUIDC::handlepending calls this at the top of each pass of a wait, so
  * that a job's message is handled there as one sent "in 0 seconds" would
@@ -53,6 +57,7 @@ MC_DLLEXPORT bool MCAsyncJobsCancel(MCValueRef p_job);
 MC_DLLEXPORT void MCAsyncJobsStatus(MCValueRef p_job, MCStringRef& r_status);
 MC_DLLEXPORT void MCAsyncJobsProgress(MCValueRef p_job, MCStringRef& r_progress);
 MC_DLLEXPORT void MCAsyncJobsList(MCStringRef& r_jobs);
+MC_DLLEXPORT bool MCAsyncJobsEndWithParent(MCValueRef p_parent);
 
 /* For an extension with native code (see async.cpp, and "Native code that
  * takes time, or has threads of its own" in

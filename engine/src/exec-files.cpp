@@ -16,8 +16,8 @@ along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 
 /* Modified from LiveCode Community. This copy, OpenXTalk-Beyond's
    (https://github.com/SethMorrowSoftware/OpenXTalk-Beyond), has changes by
-   Seth Morrow (2026) and Tom Perry (2026); its Git history and CHANGELOG.md
-   say what changed. */
+   Seth Morrow (2026), Tom Perry (2026) and Emily-Elizabeth Howard (2026);
+   its Git history and CHANGELOG.md say what changed. */
 
 #include "prefix.h"
 
@@ -829,6 +829,72 @@ void MCFilesExecDeleteFile(MCExecContext& ctxt, MCStringRef p_target)
 		ctxt . SetTheResultToStaticCString("can't delete that file");
 	else
 		ctxt . SetTheResultToEmpty();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// OXT-Beyond: "move file <path> to trash" (or folder): the file or folder
+// goes to the user's trash, from which it can be put back, as the file
+// manager's own command does. The result is empty when it went, "can't
+// find that file" when there is nothing at the path, and "can't move to
+// trash" otherwise (no trash where it is, as on a phone or the server, or
+// the system refused): HyperXTalk's words, so a script that checks them
+// reads the same on both. From HyperXTalk (Emily-Elizabeth Howard, commit
+// 72be0fee, #538)
+void MCFilesExecMoveToTrash(MCExecContext& ctxt, MCStringRef p_target)
+{
+	if (!ctxt . EnsureDiskAccessIsAllowed())
+		return;
+
+	bool t_is_file = MCS_exists(p_target, true);
+	if (!t_is_file && !MCS_exists(p_target, false))
+	{
+		ctxt . SetTheResultToStaticCString("can't find that file");
+		return;
+	}
+
+	// As delete file does: an open file is closed first
+	if (t_is_file)
+	{
+		MCNewAutoNameRef t_target_name;
+		if (!MCNameCreate(p_target, &t_target_name))
+		{
+			ctxt . Throw();
+			return;
+		}
+		IO_closefile(*t_target_name);
+	}
+
+	if (MCS_movetotrash(p_target))
+		ctxt . SetTheResultToEmpty();
+	else
+		ctxt . SetTheResultToStaticCString("can't move to trash");
+}
+
+// OXT-Beyond: "show <path> in finder" (or explorer, the same command on
+// every system): the desktop's file manager opens the folder that holds the
+// file or folder, with it selected. The result is empty when it did, "file
+// not found" when there is nothing at the path (HyperXTalk's words), and
+// "can't show that file" otherwise. It starts the file manager, so it needs both the disk
+// and the processes the secureMode can take away. From HyperXTalk (Emily-
+// Elizabeth Howard, commit fa24a0db, #539)
+void MCFilesExecRevealFile(MCExecContext& ctxt, MCStringRef p_target)
+{
+	if (!ctxt . EnsureDiskAccessIsAllowed())
+		return;
+	if (!ctxt . EnsureProcessIsAllowed())
+		return;
+
+	if (!MCS_exists(p_target, true) && !MCS_exists(p_target, false))
+	{
+		ctxt . SetTheResultToStaticCString("file not found");
+		return;
+	}
+
+	if (MCS_revealfile(p_target))
+		ctxt . SetTheResultToEmpty();
+	else
+		ctxt . SetTheResultToStaticCString("can't show that file");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2182,6 +2248,21 @@ void MCFilesExecReadFromProcess(MCExecContext& ctxt, MCNameRef p_process, MCStri
 		break;
 	}
 
+	// OXT-Beyond: a read that ended at the end of an ended process's output
+	// is noted, for the closeEndedProcesses (IO_cleanprocesses). The process
+	// is found again by its stream: a script's messages may have run while
+	// the read waited, and moved it in the list or closed it.
+	if (t_stat == IO_EOF && t_stream != NULL)
+	{
+		for (uindex_t i = 0; i < MCnprocesses; i++)
+			if (MCprocesses[i].ihandle == t_stream)
+			{
+				if (MCprocesses[i].pid == 0)
+					MCprocesses[i].read_to_end = true;
+				break;
+			}
+	}
+
     MCFilesReadComplete(ctxt, *t_output, t_stat, t_encoding != kMCFileEncodingBinary);
 }
 
@@ -2729,6 +2810,21 @@ void MCFilesGetHideConsoleWindows(MCExecContext& ctxt, bool& r_value)
 void MCFilesSetHideConsoleWindows(MCExecContext& ctxt, bool p_value)
 {
 	MChidewindows = p_value ? True : False;
+}
+
+// OXT-Beyond: the closeEndedProcesses, false by default. When it is true, a
+// process opened for read or update that has ended, and whose output a read
+// has taken to its end ("eof" in the result), leaves the openProcesses and
+// the openProcessIDs, as one opened for write or neither does when it ends
+// (IO_cleanprocesses).
+void MCFilesGetCloseEndedProcesses(MCExecContext& ctxt, bool& r_value)
+{
+	r_value = MCcloseendedprocesses;
+}
+
+void MCFilesSetCloseEndedProcesses(MCExecContext& ctxt, bool p_value)
+{
+	MCcloseendedprocesses = p_value;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
