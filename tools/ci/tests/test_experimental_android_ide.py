@@ -88,7 +88,10 @@ class AndroidEngineIdeFallbackTest(unittest.TestCase):
                 written = f.read()
         return p.returncode, p.stdout + p.stderr, written
 
-    @unittest.skipUnless(shutil.which('bash'), 'needs bash')
+    # As test_android_engine.py and test_pi_os_check.py do: on Windows
+    # 'bash' can be WSL's launcher, which fails with no distribution
+    # installed (windows-latest, 2026-11-28); the Linux and macOS jobs run it
+    @unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'needs bash (not on Windows)')
     def test_the_steps_run(self):
         for step in self.steps():
             # no release here: OXT-Beyond's latest (before, pipefail ended
