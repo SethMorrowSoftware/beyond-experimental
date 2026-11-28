@@ -263,6 +263,17 @@ lcs: core/interface/hypercard-import: TestHyperCardImportSoundHeaders
 lcs: core/interface/hypercard-import: TestHyperCardImportStack
 lcs: core/interface/hypercard-import: TestHyperCardImportStyledText
 lcs: core/interface/hypercard-import: TestHyperCardImportVersion1
+lcs: core/interface/image-paintcompression-none: TestNoneCompressesWithThePaintCompressionThen  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneGivesTheDataRleGives  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImageClonesAndCrops  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImageDrawsAsRleDoes  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImageGivenText  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImageReportsTheFormatItSaves  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImageSetManyTimes  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneImagesAreSavedCompressed  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneIsAPaintCompression  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneKeepsThePixelsSet  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
+lcs: core/interface/image-paintcompression-none: TestNoneMaskedPixelsKeepTheirColourWhileHeld  # 9.6.3 has no paintCompression "none", new in beyond-experimental (#3)
 lcs: core/interface/image-undo: TestRotateImageGetDataWorks
 lcs: core/interface/image-undo: TestRotateImageWorks
 lcs: core/interface/interface: TestImageIntersect
