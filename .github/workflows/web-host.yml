@@ -256,7 +256,12 @@ jobs:
       - name: Build and start the Docker image
         timeout-minutes: 15
         run: |
-          docker build --build-arg "OXT_VERSION=$VERSION" -t oxt-beyond-web tools/web-host
+          # (the zips from this repository's own release: the Dockerfile's
+          # default names OXT-Beyond's, which a fork or beyond-experimental
+          # does not publish under the same tag)
+          docker build --build-arg "OXT_VERSION=$VERSION" \
+            --build-arg "OXT_RELEASES=https://github.com/$GITHUB_REPOSITORY/releases/download" \
+            -t oxt-beyond-web tools/web-host
           docker run -d --name oxt -p 8800:8000 -p 8801:8001 -e OXT_PASSWORD=ci-password oxt-beyond-web
           for i in $(seq 1 60); do
             status=$(docker inspect --format '{{.State.Health.Status}}' oxt)
